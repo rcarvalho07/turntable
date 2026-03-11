@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>360° Builder</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Jost:wght@300;400;500;600&display=swap');
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  :root { --bg:#f7f5f2; --white:#fff; --text:#1a1a1a; --muted:#9a9690; --accent:#c8a96e; --dark:#a8894e; --border:#e2ddd8; }
+  html,body { width:100%; min-height:100%; background:var(--bg); font-family:'Jost',sans-serif; color:var(--text); }
+  .page { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:48px 24px; gap:36px; }
+  .header { text-align:center; display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .header-brand { font-family:'Cormorant Garamond',serif; font-size:12px; letter-spacing:.3em; text-transform:uppercase; color:var(--muted); }
+  .header-title { font-family:'Cormorant Garamond',serif; font-size:clamp(26px,5vw,40px); font-weight:300; line-height:1.2; }
+  .header-title em { font-style:italic; color:var(--accent); }
+  .header-sub { font-size:12px; color:var(--muted); letter-spacing:.04em; line-height:1.7; max-width:400px; text-align:center; }
+  .dropwrap { width:min(520px,90vw); }
+  .dropbox { width:100%; border:1px dashed var(--border); padding:44px 28px; text-align:center; background:var(--white); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:18px; transition:border-color .2s,background .2s; }
+  .dropbox:hover,.dropbox.over { border-color:var(--accent); background:#fdfaf6; border-style:solid; }
+  .drop-icon { width:52px; height:52px; border:1px solid var(--border); border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--accent); }
+  .drop-label { font-size:13px; color:var(--text); }
+  .drop-sub { font-size:11px; color:var(--muted); line-height:1.6; }
+  .btn-dark { font-family:'Jost',sans-serif; font-size:11px; font-weight:500; letter-spacing:.2em; text-transform:uppercase; background:var(--text); color:var(--white); border:none; padding:13px 30px; cursor:pointer; transition:background .2s; }
+  .btn-dark:hover { background:var(--dark); }
+  #fileInput { display:none; }
+  #progressWrap { width:min(520px,90vw); display:none; flex-direction:column; gap:14px; }
+  #progressWrap.show { display:flex; }
+  .prog-label { font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); }
+  .prog-bar { height:2px; background:var(--border); position:relative; }
+  .prog-fill { position:absolute; left:0; top:0; bottom:0; background:var(--accent); width:0%; transition:width .1s; }
+  .prog-count { font-size:17px; font-weight:500; color:var(--text); }
+  .prog-eta { font-size:10px; letter-spacing:.15em; color:var(--muted); text-transform:uppercase; }
+  #previewGrid { display:none; width:min(520px,90vw); flex-direction:column; gap:12px; }
+  #previewGrid.show { display:flex; }
+  .grid-label { font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(56px,1fr)); gap:3px; }
+  .grid img { width:100%; aspect-ratio:16/9; object-fit:cover; }
+  #generateWrap { display:none; flex-direction:column; align-items:center; gap:10px; }
+  #generateWrap.show { display:flex; }
+  .btn-generate { font-family:'Jost',sans-serif; font-size:12px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; background:var(--accent); color:var(--white); border:none; padding:16px 48px; cursor:pointer; transition:background .2s; }
+  .btn-generate:hover { background:var(--dark); }
+  .gen-note { font-size:10px; color:var(--muted); letter-spacing:.06em; text-align:center; line-height:1.7; max-width:380px; }
+  #generatingMsg { display:none; flex-direction:column; align-items:center; gap:10px; }
+  #generatingMsg.show { display:flex; }
+  .gen-spin { width:28px; height:28px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .gen-msg { font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="header-brand">360° Viewer Builder</div>
+    <div class="header-title">Gera o teu<br><em>embed responsivo</em></div>
+    <div class="header-sub">Carrega as 34 frames e gera um HTML standalone com as imagens incorporadas — pronto para GitHub Pages + Figma Sites.</div>
+  </div>
+  <div class="dropwrap">
+    <div class="dropbox" id="dropbox">
+      <div class="drop-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+          <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+        </svg>
+      </div>
+      <div class="drop-label">Arrasta as 34 frames aqui</div>
+      <div class="drop-sub">JPG · PNG · WebP · ordenadas por nome</div>
+      <button class="btn-dark" id="selectBtn">Selecionar Imagens</button>
+      <input type="file" id="fileInput" multiple accept="image/*">
+    </div>
+  </div>
+  <div id="progressWrap">
+    <div class="prog-label">A processar imagens</div>
+    <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+    <div class="prog-count" id="progCount">0 / 0</div>
+    <div class="prog-eta" id="progEta"></div>
+  </div>
+  <div id="previewGrid">
+    <div class="grid-label" id="gridLabel"></div>
+    <div class="grid" id="grid"></div>
+  </div>
+  <div id="generateWrap">
+    <button class="btn-generate" id="generateBtn">⬇ Gerar HTML para Embed</button>
+    <div class="gen-note">O ficheiro gerado é responsivo e adapta-se a qualquer dispositivo.<br>Faz upload como <strong>index.html</strong> no GitHub Pages.</div>
+  </div>
+  <div id="generatingMsg">
+    <div class="gen-spin"></div>
+    <div class="gen-msg" id="genMsg">A gerar ficheiro...</div>
+  </div>
+</div>
+<script>
+const TOTAL = 34;
+const dataURLs = [];
+let totalFiles = 0;
+
+const dropbox     = document.getElementById('dropbox');
+const fileInput   = document.getElementById('fileInput');
+const progWrap    = document.getElementById('progressWrap');
+const progFill    = document.getElementById('progFill');
+const progCount   = document.getElementById('progCount');
+const progEta     = document.getElementById('progEta');
+const previewGrid = document.getElementById('previewGrid');
+const gridLabel   = document.getElementById('gridLabel');
+const grid        = document.getElementById('grid');
+const genWrap     = document.getElementById('generateWrap');
+const genMsgWrap  = document.getElementById('generatingMsg');
+const genMsg      = document.getElementById('genMsg');
+
+document.getElementById('selectBtn').addEventListener('click', e => { e.stopPropagation(); fileInput.click(); });
+fileInput.addEventListener('change', e => { if(e.target.files.length>0) processFiles(e.target.files); });
+dropbox.addEventListener('dragover', e => { e.preventDefault(); dropbox.classList.add('over'); });
+dropbox.addEventListener('dragleave', () => dropbox.classList.remove('over'));
+dropbox.addEventListener('drop', e => { e.preventDefault(); dropbox.classList.remove('over'); if(e.dataTransfer.files.length>0) processFiles(e.dataTransfer.files); });
+
+function processFiles(files) {
+  const sorted = Array.from(files).sort((a,b) => a.name.localeCompare(b.name,undefined,{numeric:true}));
+  const toProcess = sorted.slice(0,TOTAL);
+  totalFiles = toProcess.length;
+  let done = 0, startTime = null;
+  dataURLs.length = 0;
+  grid.innerHTML = '';
+  dropbox.style.display = 'none';
+  progWrap.classList.add('show');
+  previewGrid.classList.remove('show');
+  genWrap.classList.remove('show');
+  progCount.textContent = '0 / ' + totalFiles;
+  progFill.style.width = '0%';
+  progEta.textContent = '';
+
+  toProcess.forEach((file, i) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      dataURLs[i] = e.target.result;
+      done++;
+      if (!startTime && done===1) startTime = Date.now();
+      const pct = done/totalFiles;
+      progFill.style.width = (pct*100)+'%';
+      progCount.textContent = done+' / '+totalFiles;
+      if (startTime && done>1 && done<totalFiles) {
+        const eta = Math.ceil((totalFiles-done)/(done/((Date.now()-startTime)/1000)));
+        progEta.textContent = eta<=1?'A terminar...':eta<60?'Faltam ~'+eta+'s':'Faltam ~'+Math.ceil(eta/60)+'min';
+      }
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      grid.appendChild(img);
+      if (done===totalFiles) {
+        progEta.textContent = 'Concluído!';
+        gridLabel.textContent = totalFiles+' frames prontas';
+        previewGrid.classList.add('show');
+        genWrap.classList.add('show');
+        setTimeout(()=>progWrap.classList.remove('show'),800);
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById('generateBtn').addEventListener('click', () => {
+  genWrap.classList.remove('show');
+  genMsgWrap.classList.add('show');
+  genMsg.textContent = 'A gerar ficheiro...';
+  setTimeout(() => {
+    try {
+      const html = buildEmbed(dataURLs);
+      const blob = new Blob([html],{type:'text/html'});
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href=url; a.download='index.html'; a.click();
+      URL.revokeObjectURL(url);
+      genMsg.textContent = '✓ index.html gerado!';
+      setTimeout(()=>{ genMsgWrap.classList.remove('show'); genWrap.classList.add('show'); },2000);
+    } catch(e) { genMsg.textContent='Erro: '+e.message; }
+  },100);
+});
+
+function buildEmbed(images) {
+  return `<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Vista 360°</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Jost:wght@300;400;500&display=swap');
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  :root {
+    --bg:#f7f5f2; --white:#fff; --text:#1a1a1a;
+    --muted:#9a9690; --accent:#c8a96e; --dark:#a8894e; --border:#e2ddd8;
+    --bar: clamp(56px, 8vh, 72px);
+    --bar-sm: clamp(48px, 7vh, 60px);
+  }
+  html, body {
+    width:100%; height:100%;
+    background:var(--bg);
+    font-family:'Jost',sans-serif;
+    overflow:hidden;
+    color:var(--text);
+    /* Fill iframe completely */
+    position:fixed; inset:0;
+  }
+  #app {
+    width:100%; height:100%;
+    display:flex; flex-direction:column;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    height:var(--bar-sm);
+    background:var(--white);
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 clamp(14px,3vw,28px);
+    flex-shrink:0;
+  }
+  .tb-brand {
+    font-family:'Cormorant Garamond',serif;
+    font-size:clamp(11px,2vw,14px);
+    letter-spacing:.2em; text-transform:uppercase;
+  }
+  .tb-right { display:flex; align-items:center; gap:clamp(10px,2vw,20px); }
+  .tb-frame {
+    font-size:clamp(9px,1.5vw,11px);
+    font-weight:500; letter-spacing:.1em;
+    color:var(--muted); text-transform:uppercase;
+  }
+  .tb-badge {
+    font-size:clamp(9px,1.3vw,10px);
+    letter-spacing:.08em; color:var(--accent);
+    text-transform:uppercase; font-weight:500;
+    display:flex; align-items:center; gap:5px;
+  }
+  .tb-dot {
+    width:5px; height:5px; border-radius:50%;
+    background:var(--accent); animation:blink 1.8s infinite;
+  }
+  /* Hide badge text on very small screens */
+  @media(max-width:360px) { .tb-badge-text { display:none; } }
+  @keyframes blink { 0%,100%{opacity:1}50%{opacity:.2} }
+
+  /* ── IMAGE AREA ── */
+  .imgarea {
+    flex:1; display:flex; align-items:center; justify-content:center;
+    overflow:hidden; position:relative; background:var(--bg);
+    min-height:0; /* important for flex shrink */
+  }
+  #display {
+    display:block;
+    max-width:100%; max-height:100%;
+    width:auto; height:auto;
+    object-fit:contain;
+    cursor:grab;
+    user-select:none; -webkit-user-drag:none;
+    /* smooth frame transition */
+    will-change:contents;
+  }
+  #display:active { cursor:grabbing; }
+
+  /* Drag hint */
+  .hint {
+    position:absolute; bottom:clamp(10px,2vh,20px);
+    left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.92); border:1px solid var(--border);
+    padding:clamp(7px,1.5vw,10px) clamp(12px,3vw,20px);
+    font-size:clamp(9px,1.5vw,11px); letter-spacing:.1em;
+    color:var(--muted); text-transform:uppercase;
+    pointer-events:none; white-space:nowrap;
+    display:flex; align-items:center; gap:6px;
+    transition:opacity .5s;
+  }
+  .hint.gone { opacity:0; }
+
+  /* Angle */
+  .angle-el {
+    position:absolute; top:clamp(8px,1.5vh,12px); right:clamp(10px,2vw,14px);
+    font-size:clamp(9px,1.5vw,10px); letter-spacing:.1em;
+    color:var(--muted); background:rgba(255,255,255,.88);
+    border:1px solid var(--border);
+    padding:clamp(3px,0.8vh,5px) clamp(7px,1.5vw,10px);
+  }
+
+  /* ── BOTTOM BAR ── */
+  .bottombar {
+    height:var(--bar);
+    background:var(--white); border-top:1px solid var(--border);
+    display:flex; align-items:center;
+    padding:0 clamp(10px,2.5vw,22px);
+    gap:0; flex-shrink:0;
+  }
+
+  /* Play controls */
+  .playctrls { display:flex; align-items:center; gap:2px; flex-shrink:0; }
+  .cbtn {
+    width:clamp(28px,5vw,36px); height:clamp(28px,5vw,36px);
+    display:flex; align-items:center; justify-content:center;
+    background:none; border:1px solid transparent;
+    color:var(--muted); cursor:pointer;
+    transition:color .15s,border-color .15s;
+    flex-shrink:0;
+  }
+  .cbtn:hover { color:var(--text); border-color:var(--border); }
+  .cbtn.on { color:var(--accent); border-color:var(--accent); background:#fdf8f0; }
+  .cbtn svg { width:clamp(10px,2vw,13px); height:clamp(10px,2vw,13px); }
+  .playbtn {
+    width:clamp(34px,6vw,44px); height:clamp(34px,6vw,44px);
+    background:var(--text); border:none; color:var(--white);
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:background .2s; flex-shrink:0;
+  }
+  .playbtn:hover { background:var(--dark); }
+  .playbtn.on { background:var(--accent); }
+  .playbtn svg { width:clamp(10px,2vw,14px); height:clamp(10px,2vw,14px); }
+
+  /* Divider */
+  .vdiv {
+    width:1px; height:clamp(20px,4vh,34px);
+    background:var(--border);
+    margin:0 clamp(8px,1.5vw,18px);
+    flex-shrink:0;
+  }
+
+  /* Scrubber */
+  .scrub { flex:1; display:flex; flex-direction:column; gap:clamp(6px,1vh,10px); min-width:0; }
+  .scrub-labels {
+    display:flex; justify-content:space-between;
+    font-size:clamp(8px,1.3vw,9px); letter-spacing:.1em;
+    color:var(--muted); text-transform:uppercase;
+  }
+  .track { position:relative; height:2px; background:var(--border); cursor:pointer; touch-action:none; }
+  .track-fill { position:absolute; left:0; top:0; bottom:0; background:var(--accent); pointer-events:none; }
+  .track-thumb {
+    position:absolute; top:50%; transform:translate(-50%,-50%);
+    width:clamp(10px,2vw,12px); height:clamp(10px,2vw,12px);
+    background:var(--accent); border:2px solid var(--white);
+    border-radius:50%; box-shadow:0 1px 4px rgba(0,0,0,.12);
+    pointer-events:none;
+  }
+
+  /* Dots — hide on very small screens */
+  .dots { display:flex; gap:2px; align-items:center; overflow:hidden; }
+  .dot {
+    flex-shrink:0;
+    width:clamp(3px,0.8vw,5px); height:clamp(3px,0.8vw,5px);
+    border-radius:50%; background:var(--border);
+    cursor:pointer; transition:background .15s,transform .15s;
+  }
+  .dot.on { background:var(--accent); transform:scale(1.5); }
+  .dot:hover { background:var(--dark); }
+  @media(max-width:480px) { .dots { display:none; } }
+
+  /* Right controls */
+  .rctrls { display:flex; align-items:center; gap:clamp(2px,0.8vw,5px); flex-shrink:0; }
+  .spd {
+    font-size:clamp(9px,1.5vw,10px); font-weight:500;
+    color:var(--accent); min-width:22px; text-align:center;
+    cursor:pointer; padding:3px; letter-spacing:.04em;
+  }
+  /* Hide reverse + speed label on tiny screens */
+  @media(max-width:400px) { #revBtn, .spd { display:none; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="tb-brand">Vista 360°</div>
+    <div class="tb-right">
+      <span class="tb-frame" id="tFrame">01 / ${images.length}</span>
+      <span class="tb-badge">
+        <span class="tb-dot"></span>
+        <span class="tb-badge-text">Arrasta para rodar</span>
+      </span>
+    </div>
+  </div>
+
+  <div class="imgarea">
+    <img id="display" draggable="false" alt="">
+    <div class="angle-el" id="angleEl">0°</div>
+    <div class="hint" id="hint">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3"/>
+      </svg>
+      Arrasta para explorar
+    </div>
+  </div>
+
+  <div class="bottombar">
+    <div class="playctrls">
+      <button class="cbtn" id="prevBtn" aria-label="Anterior">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <button class="playbtn" id="playBtn" aria-label="Play/Pause">
+        <svg viewBox="0 0 24 24" fill="currentColor" id="playIcon"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      </button>
+      <button class="cbtn" id="nextBtn" aria-label="Seguinte">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+
+    <div class="vdiv"></div>
+
+    <div class="scrub">
+      <div class="scrub-labels"><span>0°</span><span id="pctLabel">0%</span><span>360°</span></div>
+      <div class="track" id="track">
+        <div class="track-fill" id="trackFill"></div>
+        <div class="track-thumb" id="trackThumb"></div>
+      </div>
+      <div class="dots" id="dotsEl"></div>
+    </div>
+
+    <div class="vdiv"></div>
+
+    <div class="rctrls">
+      <button class="cbtn" id="revBtn" aria-label="Inverter direção">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="1 4 1 10 7 10"/>
+          <path d="M3.51 15a9 9 0 1 0 .49-3.85"/>
+        </svg>
+      </button>
+      <span class="spd" id="spdLabel">1×</span>
+      <button class="cbtn" id="spdBtn" aria-label="Velocidade">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+      </button>
+      <button class="cbtn" id="fsBtn" aria-label="Fullscreen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+          <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const IMGS = ${JSON.stringify(images)};
+const TOTAL = IMGS.length;
+let current=0, playing=false, playTimer=null, dir=1, speed=1;
+const speeds=[0.5,1,2,3]; let spdIdx=1;
+let dragging=false, dragX=0, dragFrame=0, trackDrag=false, interacted=false;
+
+const display    = document.getElementById('display');
+const tFrame     = document.getElementById('tFrame');
+const hint       = document.getElementById('hint');
+const angleEl    = document.getElementById('angleEl');
+const trackFill  = document.getElementById('trackFill');
+const trackThumb = document.getElementById('trackThumb');
+const pctLabel   = document.getElementById('pctLabel');
+const dotsEl     = document.getElementById('dotsEl');
+const playBtn    = document.getElementById('playBtn');
+const playIcon   = document.getElementById('playIcon');
+const spdLabel   = document.getElementById('spdLabel');
+const track      = document.getElementById('track');
+
+// Build dots
+for(let i=0;i<TOTAL;i++){
+  const d=document.createElement('div');
+  d.className='dot'+(i===0?' on':'');
+  d.addEventListener('click',()=>goTo(i));
+  dotsEl.appendChild(d);
+}
+
+function goTo(n){
+  current=((n%TOTAL)+TOTAL)%TOTAL;
+  display.src=IMGS[current];
+  updateUI();
+}
+function updateUI(){
+  const p=current/(TOTAL-1);
+  tFrame.textContent=String(current+1).padStart(2,'0')+' / '+TOTAL;
+  trackFill.style.width=(p*100)+'%';
+  trackThumb.style.left=(p*100)+'%';
+  pctLabel.textContent=Math.round(p*100)+'%';
+  angleEl.textContent=Math.round(p*360)+'°';
+  dotsEl.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('on',i===current));
+}
+function hideHint(){ if(!interacted){interacted=true;hint.classList.add('gone');} }
+
+// Mouse drag
+display.addEventListener('mousedown',e=>{
+  dragging=true; dragX=e.clientX; dragFrame=current;
+  hideHint(); if(playing)stopPlay(); e.preventDefault();
+});
+window.addEventListener('mousemove',e=>{
+  if(!dragging)return;
+  const sens=(display.offsetWidth||window.innerWidth)/TOTAL*0.75;
+  goTo(dragFrame-Math.round((e.clientX-dragX)/sens)*dir);
+});
+window.addEventListener('mouseup',()=>{dragging=false;});
+
+// Touch drag
+display.addEventListener('touchstart',e=>{
+  dragging=true; dragX=e.touches[0].clientX; dragFrame=current;
+  hideHint(); if(playing)stopPlay();
+},{passive:true});
+window.addEventListener('touchmove',e=>{
+  if(!dragging)return;
+  const sens=(display.offsetWidth||window.innerWidth)/TOTAL*0.75;
+  goTo(dragFrame-Math.round((e.touches[0].clientX-dragX)/sens)*dir);
+},{passive:true});
+window.addEventListener('touchend',()=>{dragging=false;});
+
+// Scroll
+display.addEventListener('wheel',e=>{
+  e.preventDefault();
+  goTo(current+(e.deltaY>0?1:-1)*dir);
+  hideHint();
+},{passive:false});
+
+// Track scrub — mouse + touch
+function scrubToX(x){
+  const r=track.getBoundingClientRect();
+  goTo(Math.round(Math.max(0,Math.min(1,(x-r.left)/r.width))*(TOTAL-1)));
+}
+track.addEventListener('mousedown',e=>{trackDrag=true;scrubToX(e.clientX);});
+window.addEventListener('mousemove',e=>{if(trackDrag)scrubToX(e.clientX);});
+window.addEventListener('mouseup',()=>{trackDrag=false;});
+track.addEventListener('touchstart',e=>{trackDrag=true;scrubToX(e.touches[0].clientX);},{passive:true});
+window.addEventListener('touchmove',e=>{if(trackDrag)scrubToX(e.touches[0].clientX);},{passive:true});
+window.addEventListener('touchend',()=>{trackDrag=false;});
+
+// Play
+function startPlay(){
+  playing=true; playBtn.classList.add('on');
+  playIcon.innerHTML='<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+  playTimer=setInterval(()=>goTo(current+dir),1000/(speed*14));
+}
+function stopPlay(){
+  playing=false; clearInterval(playTimer); playBtn.classList.remove('on');
+  playIcon.innerHTML='<polygon points="5 3 19 12 5 21 5 3"/>';
+}
+playBtn.addEventListener('click',()=>{hideHint();playing?stopPlay():startPlay();});
+document.getElementById('prevBtn').addEventListener('click',()=>{stopPlay();goTo(current-1);});
+document.getElementById('nextBtn').addEventListener('click',()=>{stopPlay();goTo(current+1);});
+document.getElementById('revBtn').addEventListener('click',()=>{
+  dir*=-1; document.getElementById('revBtn').classList.toggle('on',dir===-1);
+});
+document.getElementById('spdBtn').addEventListener('click',()=>{
+  spdIdx=(spdIdx+1)%speeds.length; speed=speeds[spdIdx];
+  spdLabel.textContent=speed+'×';
+  if(playing){stopPlay();startPlay();}
+});
+document.getElementById('fsBtn').addEventListener('click',()=>{
+  const el=document.documentElement;
+  if(!document.fullscreenElement) el.requestFullscreen?.();
+  else document.exitFullscreen?.();
+});
+window.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'){stopPlay();goTo(current-dir);}
+  if(e.key==='ArrowRight'){stopPlay();goTo(current+dir);}
+  if(e.key===' '){e.preventDefault();playing?stopPlay():startPlay();}
+});
+
+// Init
+display.src = IMGS[0];
+updateUI();
+<\/script>
+</body>
+</html>`;
+}
+</script>
+</body>
+</html>
