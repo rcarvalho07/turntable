@@ -187,7 +187,6 @@ function buildEmbed(images) {
     --bg:#f7f5f2; --white:#fff; --text:#1a1a1a;
     --muted:#9a9690; --accent:#c8a96e; --dark:#a8894e; --border:#e2ddd8;
     --bar: clamp(56px, 8vh, 72px);
-    --bar-sm: clamp(48px, 7vh, 60px);
   }
   html, body {
     width:100%; height:100%;
@@ -203,38 +202,6 @@ function buildEmbed(images) {
     display:flex; flex-direction:column;
   }
 
-  /* ── TOPBAR ── */
-  .topbar {
-    height:var(--bar-sm);
-    background:var(--white);
-    border-bottom:1px solid var(--border);
-    display:flex; align-items:center; justify-content:space-between;
-    padding:0 clamp(14px,3vw,28px);
-    flex-shrink:0;
-  }
-  .tb-brand {
-    font-family:'Cormorant Garamond',serif;
-    font-size:clamp(11px,2vw,14px);
-    letter-spacing:.2em; text-transform:uppercase;
-  }
-  .tb-right { display:flex; align-items:center; gap:clamp(10px,2vw,20px); }
-  .tb-frame {
-    font-size:clamp(9px,1.5vw,11px);
-    font-weight:500; letter-spacing:.1em;
-    color:var(--muted); text-transform:uppercase;
-  }
-  .tb-badge {
-    font-size:clamp(9px,1.3vw,10px);
-    letter-spacing:.08em; color:var(--accent);
-    text-transform:uppercase; font-weight:500;
-    display:flex; align-items:center; gap:5px;
-  }
-  .tb-dot {
-    width:5px; height:5px; border-radius:50%;
-    background:var(--accent); animation:blink 1.8s infinite;
-  }
-  /* Hide badge text on very small screens */
-  @media(max-width:360px) { .tb-badge-text { display:none; } }
   @keyframes blink { 0%,100%{opacity:1}50%{opacity:.2} }
 
   /* ── IMAGE AREA ── */
@@ -269,14 +236,7 @@ function buildEmbed(images) {
   }
   .hint.gone { opacity:0; }
 
-  /* Angle */
-  .angle-el {
-    position:absolute; top:clamp(8px,1.5vh,12px); right:clamp(10px,2vw,14px);
-    font-size:clamp(9px,1.5vw,10px); letter-spacing:.1em;
-    color:var(--muted); background:rgba(255,255,255,.88);
-    border:1px solid var(--border);
-    padding:clamp(3px,0.8vh,5px) clamp(7px,1.5vw,10px);
-  }
+
 
   /* ── BOTTOM BAR ── */
   .bottombar {
@@ -360,20 +320,10 @@ function buildEmbed(images) {
 </head>
 <body>
 <div id="app">
-  <div class="topbar">
-    <div class="tb-brand">Vista 360°</div>
-    <div class="tb-right">
-      <span class="tb-frame" id="tFrame">01 / ${images.length}</span>
-      <span class="tb-badge">
-        <span class="tb-dot"></span>
-        <span class="tb-badge-text">Arrasta para rodar</span>
-      </span>
-    </div>
-  </div>
+
 
   <div class="imgarea">
     <img id="display" draggable="false" alt="">
-    <div class="angle-el" id="angleEl">0°</div>
     <div class="hint" id="hint">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3"/>
@@ -441,7 +391,6 @@ let dragging=false, dragX=0, dragFrame=0, trackDrag=false, interacted=false;
 const display    = document.getElementById('display');
 const tFrame     = document.getElementById('tFrame');
 const hint       = document.getElementById('hint');
-const angleEl    = document.getElementById('angleEl');
 const trackFill  = document.getElementById('trackFill');
 const trackThumb = document.getElementById('trackThumb');
 const pctLabel   = document.getElementById('pctLabel');
@@ -470,7 +419,6 @@ function updateUI(){
   trackFill.style.width=(p*100)+'%';
   trackThumb.style.left=(p*100)+'%';
   pctLabel.textContent=Math.round(p*100)+'%';
-  angleEl.textContent=Math.round(p*360)+'°';
   dotsEl.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('on',i===current));
 }
 function hideHint(){ if(!interacted){interacted=true;hint.classList.add('gone');} }
