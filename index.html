@@ -7,105 +7,344 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Jost:wght@300;400;500;600&display=swap');
   *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-  :root { --bg:#f7f5f2; --white:#fff; --text:#1a1a1a; --muted:#9a9690; --accent:#c8a96e; --dark:#a8894e; --border:#e2ddd8; }
+  :root { --bg:#f7f5f2; --white:#fff; --text:#1a1a1a; --muted:#9a9690; --accent:#c8a96e; --dark:#a8894e; --border:#e2ddd8; --red:#e07070; --green:#70a880; }
   html,body { width:100%; min-height:100%; background:var(--bg); font-family:'Jost',sans-serif; color:var(--text); }
-  .page { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:48px 24px; gap:36px; }
-  .header { text-align:center; display:flex; flex-direction:column; align-items:center; gap:10px; }
-  .header-brand { font-family:'Cormorant Garamond',serif; font-size:12px; letter-spacing:.3em; text-transform:uppercase; color:var(--muted); }
-  .header-title { font-family:'Cormorant Garamond',serif; font-size:clamp(26px,5vw,40px); font-weight:300; line-height:1.2; }
-  .header-title em { font-style:italic; color:var(--accent); }
-  .header-sub { font-size:12px; color:var(--muted); letter-spacing:.04em; line-height:1.7; max-width:400px; text-align:center; }
-  .dropwrap { width:min(520px,90vw); }
-  .dropbox { width:100%; border:1px dashed var(--border); padding:44px 28px; text-align:center; background:var(--white); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:18px; transition:border-color .2s,background .2s; }
+
+  /* ── STEP INDICATOR ── */
+  .steps-nav { display:flex; align-items:center; justify-content:center; gap:0; padding:28px 24px 0; }
+  .step-item { display:flex; align-items:center; gap:10px; }
+  .step-num { width:28px; height:28px; border-radius:50%; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:500; color:var(--muted); background:var(--white); transition:all .3s; }
+  .step-num.active { background:var(--accent); border-color:var(--accent); color:var(--white); }
+  .step-num.done { background:var(--text); border-color:var(--text); color:var(--white); }
+  .step-label { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); transition:color .3s; }
+  .step-label.active { color:var(--text); }
+  .step-line { width:40px; height:1px; background:var(--border); margin:0 8px; }
+
+  /* ── PAGES ── */
+  .page { display:none; min-height:calc(100vh - 80px); padding:40px 24px 60px; flex-direction:column; align-items:center; justify-content:center; gap:32px; }
+  .page.show { display:flex; }
+
+  /* ── UPLOAD PAGE ── */
+  .up-header { text-align:center; display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .up-brand { font-family:'Cormorant Garamond',serif; font-size:12px; letter-spacing:.3em; text-transform:uppercase; color:var(--muted); }
+  .up-title { font-family:'Cormorant Garamond',serif; font-size:clamp(26px,5vw,40px); font-weight:300; line-height:1.2; }
+  .up-title em { font-style:italic; color:var(--accent); }
+  .dropbox { width:min(520px,90vw); border:1px dashed var(--border); padding:44px 28px; text-align:center; background:var(--white); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:16px; transition:border-color .2s,background .2s; }
   .dropbox:hover,.dropbox.over { border-color:var(--accent); background:#fdfaf6; border-style:solid; }
   .drop-icon { width:52px; height:52px; border:1px solid var(--border); border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--accent); }
   .drop-label { font-size:13px; color:var(--text); }
   .drop-sub { font-size:11px; color:var(--muted); line-height:1.6; }
   .btn-dark { font-family:'Jost',sans-serif; font-size:11px; font-weight:500; letter-spacing:.2em; text-transform:uppercase; background:var(--text); color:var(--white); border:none; padding:13px 30px; cursor:pointer; transition:background .2s; }
   .btn-dark:hover { background:var(--dark); }
+  .btn-accent { font-family:'Jost',sans-serif; font-size:11px; font-weight:500; letter-spacing:.2em; text-transform:uppercase; background:var(--accent); color:var(--white); border:none; padding:13px 30px; cursor:pointer; transition:background .2s; }
+  .btn-accent:hover { background:var(--dark); }
+  .btn-outline { font-family:'Jost',sans-serif; font-size:11px; letter-spacing:.12em; text-transform:uppercase; background:none; color:var(--muted); border:1px solid var(--border); padding:11px 24px; cursor:pointer; transition:color .2s,border-color .2s; }
+  .btn-outline:hover { color:var(--accent); border-color:var(--accent); }
   #fileInput { display:none; }
-  #progressWrap { width:min(520px,90vw); display:none; flex-direction:column; gap:14px; }
-  #progressWrap.show { display:flex; }
+
+  /* Progress */
+  .prog-wrap { width:min(520px,90vw); display:flex; flex-direction:column; gap:12px; }
   .prog-label { font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); }
   .prog-bar { height:2px; background:var(--border); position:relative; }
   .prog-fill { position:absolute; left:0; top:0; bottom:0; background:var(--accent); width:0%; transition:width .1s; }
-  .prog-count { font-size:17px; font-weight:500; color:var(--text); }
-  .prog-eta { font-size:10px; letter-spacing:.15em; color:var(--muted); text-transform:uppercase; }
-  #previewGrid { display:none; width:min(520px,90vw); flex-direction:column; gap:12px; }
-  #previewGrid.show { display:flex; }
-  .grid-label { font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); }
-  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(56px,1fr)); gap:3px; }
-  .grid img { width:100%; aspect-ratio:16/9; object-fit:cover; }
-  #generateWrap { display:none; flex-direction:column; align-items:center; gap:10px; }
-  #generateWrap.show { display:flex; }
-  .btn-generate { font-family:'Jost',sans-serif; font-size:12px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; background:var(--accent); color:var(--white); border:none; padding:16px 48px; cursor:pointer; transition:background .2s; }
-  .btn-generate:hover { background:var(--dark); }
-  .gen-note { font-size:10px; color:var(--muted); letter-spacing:.06em; text-align:center; line-height:1.7; max-width:380px; }
-  #generatingMsg { display:none; flex-direction:column; align-items:center; gap:10px; }
-  #generatingMsg.show { display:flex; }
-  .gen-spin { width:28px; height:28px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; }
+  .prog-count { font-size:16px; font-weight:500; color:var(--text); }
+  .prog-eta { font-size:10px; letter-spacing:.12em; color:var(--muted); text-transform:uppercase; }
+
+  /* ── HOTSPOT EDITOR PAGE ── */
+  #pageEditor { align-items:stretch; padding:24px; gap:20px; max-width:1200px; margin:0 auto; width:100%; }
+  .editor-layout { display:grid; grid-template-columns:1fr 340px; gap:20px; width:100%; }
+  @media(max-width:860px){ .editor-layout { grid-template-columns:1fr; } }
+
+  /* Canvas area */
+  .canvas-col { display:flex; flex-direction:column; gap:12px; }
+  .canvas-label { font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); }
+  .canvas-wrap {
+    position:relative; background:var(--white);
+    border:1px solid var(--border); overflow:hidden;
+    cursor:crosshair;
+    user-select:none;
+  }
+  .canvas-wrap img { display:block; width:100%; height:auto; pointer-events:none; }
+  .canvas-wrap.adding { cursor:crosshair; }
+  .canvas-wrap.viewing { cursor:default; }
+
+  /* Hotspot dot on canvas */
+  .hs-dot {
+    position:absolute; transform:translate(-50%,-50%);
+    width:28px; height:28px; border-radius:50%;
+    background:var(--accent); border:2px solid var(--white);
+    box-shadow:0 2px 8px rgba(0,0,0,.25);
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; font-weight:600; color:var(--white);
+    cursor:pointer; transition:transform .15s, background .15s;
+    z-index:10;
+  }
+  .hs-dot:hover { transform:translate(-50%,-50%) scale(1.2); }
+  .hs-dot.selected { background:var(--text); box-shadow:0 0 0 3px var(--accent); }
+  .hs-dot.sold { background:var(--red); }
+  .hs-dot.reserved { background:#e0b870; }
+
+  /* Frame nav under canvas */
+  .frame-nav { display:flex; align-items:center; gap:12px; }
+  .frame-nav-btn { background:none; border:1px solid var(--border); width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--muted); transition:color .15s, border-color .15s; }
+  .frame-nav-btn:hover { color:var(--accent); border-color:var(--accent); }
+  .frame-nav-btn svg { width:12px; height:12px; }
+  .frame-slider { flex:1; -webkit-appearance:none; height:2px; background:var(--border); outline:none; cursor:pointer; }
+  .frame-slider::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; background:var(--accent); border-radius:50%; cursor:pointer; }
+  .frame-info { font-size:11px; color:var(--muted); letter-spacing:.08em; white-space:nowrap; }
+
+  .add-btn-row { display:flex; gap:8px; align-items:center; }
+  .add-hint { font-size:11px; color:var(--muted); }
+
+  /* Panel */
+  .panel-col { display:flex; flex-direction:column; gap:16px; }
+  .panel-title { font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:300; }
+  .panel-title em { font-style:italic; color:var(--accent); }
+
+  /* Hotspot list */
+  .hs-list { display:flex; flex-direction:column; gap:4px; max-height:220px; overflow-y:auto; }
+  .hs-list-item {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px; background:var(--white);
+    border:1px solid var(--border); cursor:pointer;
+    transition:border-color .15s;
+  }
+  .hs-list-item:hover { border-color:var(--accent); }
+  .hs-list-item.selected { border-color:var(--text); background:#fafaf8; }
+  .hs-badge { width:22px; height:22px; border-radius:50%; background:var(--accent); color:var(--white); font-size:10px; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .hs-badge.sold { background:var(--red); }
+  .hs-badge.reserved { background:#e0b870; }
+  .hs-item-name { font-size:12px; font-weight:500; flex:1; }
+  .hs-item-type { font-size:10px; color:var(--muted); }
+  .hs-del { background:none; border:none; cursor:pointer; color:var(--muted); padding:2px; display:flex; align-items:center; justify-content:center; transition:color .15s; }
+  .hs-del:hover { color:var(--red); }
+  .hs-del svg { width:13px; height:13px; }
+
+  /* Edit form */
+  .edit-form { background:var(--white); border:1px solid var(--border); padding:16px; display:flex; flex-direction:column; gap:12px; }
+  .edit-form-title { font-size:12px; font-weight:500; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); padding-bottom:8px; border-bottom:1px solid var(--border); }
+  .form-row { display:flex; flex-direction:column; gap:4px; }
+  .form-row label { font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .form-row input, .form-row select, .form-row textarea {
+    font-family:'Jost',sans-serif; font-size:12px; color:var(--text);
+    border:1px solid var(--border); background:var(--bg);
+    padding:8px 10px; outline:none; width:100%;
+    transition:border-color .15s;
+  }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color:var(--accent); }
+  .form-row textarea { resize:vertical; min-height:60px; }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+  /* Status colors */
+  select option[value="available"] { color:var(--green); }
+  select option[value="sold"] { color:var(--red); }
+  select option[value="reserved"] { color:#e0b870; }
+
+  /* Image upload in form */
+  .img-upload-wrap { position:relative; }
+  .img-preview { width:100%; height:80px; object-fit:cover; display:none; border:1px solid var(--border); }
+  .img-preview.show { display:block; }
+  .img-upload-btn { width:100%; padding:10px; border:1px dashed var(--border); background:var(--bg); color:var(--muted); font-size:11px; cursor:pointer; text-align:center; transition:border-color .2s; }
+  .img-upload-btn:hover { border-color:var(--accent); color:var(--accent); }
+  #imgFileInput { display:none; }
+
+  /* No selection state */
+  .no-selection { padding:20px; text-align:center; color:var(--muted); font-size:12px; line-height:1.6; border:1px dashed var(--border); }
+
+  /* Generate section */
+  .generate-row { display:flex; flex-direction:column; gap:8px; }
+  .gen-note { font-size:10px; color:var(--muted); line-height:1.6; }
+  #genMsgWrap { display:none; align-items:center; gap:10px; }
+  #genMsgWrap.show { display:flex; }
+  .gen-spin { width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; flex-shrink:0; }
   @keyframes spin { to { transform:rotate(360deg); } }
-  .gen-msg { font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); }
+  .gen-msg { font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
 </style>
 </head>
 <body>
-<div class="page">
-  <div class="header">
-    <div class="header-brand">360° Viewer Builder</div>
-    <div class="header-title">Gera o teu<br><em>embed responsivo</em></div>
-    <div class="header-sub">Carrega as 34 frames e gera um HTML standalone com as imagens incorporadas — pronto para GitHub Pages + Figma Sites.</div>
+
+<!-- Step indicator -->
+<div class="steps-nav">
+  <div class="step-item">
+    <div class="step-num active" id="snum1">1</div>
+    <div class="step-label active" id="slbl1">Frames</div>
   </div>
-  <div class="dropwrap">
-    <div class="dropbox" id="dropbox">
-      <div class="drop-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
-          <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
-        </svg>
-      </div>
-      <div class="drop-label">Arrasta as 34 frames aqui</div>
-      <div class="drop-sub">JPG · PNG · WebP · ordenadas por nome</div>
-      <button class="btn-dark" id="selectBtn">Selecionar Imagens</button>
-      <input type="file" id="fileInput" multiple accept="image/*">
+  <div class="step-line"></div>
+  <div class="step-item">
+    <div class="step-num" id="snum2">2</div>
+    <div class="step-label" id="slbl2">Hotspots</div>
+  </div>
+  <div class="step-line"></div>
+  <div class="step-item">
+    <div class="step-num" id="snum3">3</div>
+    <div class="step-label" id="slbl3">Exportar</div>
+  </div>
+</div>
+
+<!-- PAGE 1: Upload -->
+<div class="page show" id="pageUpload">
+  <div class="up-header">
+    <div class="up-brand">360° Viewer Builder</div>
+    <div class="up-title">Carrega as<br><em>34 frames</em></div>
+  </div>
+  <div class="dropbox" id="dropbox">
+    <div class="drop-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+        <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+      </svg>
     </div>
+    <div class="drop-label">Arrasta as frames aqui</div>
+    <div class="drop-sub">JPG · PNG · WebP · ordenadas por nome</div>
+    <button class="btn-dark" id="selectBtn">Selecionar Imagens</button>
+    <input type="file" id="fileInput" multiple accept="image/*">
   </div>
-  <div id="progressWrap">
+  <!-- Progress (hidden initially) -->
+  <div class="prog-wrap" id="progWrap" style="display:none">
     <div class="prog-label">A processar imagens</div>
     <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
     <div class="prog-count" id="progCount">0 / 0</div>
     <div class="prog-eta" id="progEta"></div>
   </div>
-  <div id="previewGrid">
-    <div class="grid-label" id="gridLabel"></div>
-    <div class="grid" id="grid"></div>
-  </div>
-  <div id="generateWrap">
-    <button class="btn-generate" id="generateBtn">⬇ Gerar HTML para Embed</button>
-    <div class="gen-note">O ficheiro gerado é responsivo e adapta-se a qualquer dispositivo.<br>Faz upload como <strong>index.html</strong> no GitHub Pages.</div>
-  </div>
-  <div id="generatingMsg">
-    <div class="gen-spin"></div>
-    <div class="gen-msg" id="genMsg">A gerar ficheiro...</div>
+</div>
+
+<!-- PAGE 2: Hotspot Editor -->
+<div class="page" id="pageEditor">
+  <div class="editor-layout">
+
+    <!-- LEFT: Canvas -->
+    <div class="canvas-col">
+      <div class="canvas-label">Clica na imagem para adicionar um hotspot</div>
+      <div class="canvas-wrap adding" id="canvasWrap">
+        <img id="editorImg" src="" alt="">
+        <!-- hotspot dots injected here -->
+      </div>
+      <div class="frame-nav">
+        <button class="frame-nav-btn" id="framePrev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <input type="range" class="frame-slider" id="frameSlider" min="0" max="33" value="0">
+        <button class="frame-nav-btn" id="frameNext"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+        <span class="frame-info" id="frameInfo">Frame 1 / 34</span>
+      </div>
+    </div>
+
+    <!-- RIGHT: Panel -->
+    <div class="panel-col">
+      <div class="panel-title">Unidades<br><em>& Hotspots</em></div>
+
+      <!-- List -->
+      <div class="hs-list" id="hsList"></div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.6;" id="hsEmpty">Nenhum hotspot ainda. Clica na imagem para adicionar.</div>
+
+      <!-- Edit form -->
+      <div class="edit-form" id="editForm" style="display:none">
+        <div class="edit-form-title" id="editFormTitle">Editar unidade</div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label>Nome / Nº</label>
+            <input type="text" id="fName" placeholder="ex: Lote 12">
+          </div>
+          <div class="form-row">
+            <label>Tipologia</label>
+            <input type="text" id="fType" placeholder="ex: T3">
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label>Área (m²)</label>
+            <input type="text" id="fArea" placeholder="ex: 142">
+          </div>
+          <div class="form-row">
+            <label>Preço</label>
+            <input type="text" id="fPrice" placeholder="ex: 285.000€">
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Estado</label>
+          <select id="fStatus">
+            <option value="available">Disponível</option>
+            <option value="reserved">Reservado</option>
+            <option value="sold">Vendido</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Imagem interior</label>
+          <div class="img-upload-wrap">
+            <img class="img-preview" id="imgPreview" src="" alt="">
+            <div class="img-upload-btn" id="imgUploadBtn">+ Adicionar imagem</div>
+            <input type="file" id="imgFileInput" accept="image/*">
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Texto do botão CTA</label>
+          <input type="text" id="fCta" placeholder="ex: Saber mais / Agendar visita">
+        </div>
+        <div class="form-row">
+          <label>Link CTA</label>
+          <input type="text" id="fCtaLink" placeholder="ex: mailto:geral@empresa.pt">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="btn-dark" style="flex:1;padding:10px" id="saveHsBtn">Guardar</button>
+          <button class="btn-outline" style="padding:10px 16px" id="deleteHsBtn">Eliminar</button>
+        </div>
+      </div>
+
+      <div class="no-selection" id="noSelection">
+        ← Clica num hotspot para editar ou clica na imagem para criar um novo
+      </div>
+
+      <!-- Generate -->
+      <div class="generate-row" style="margin-top:auto;padding-top:12px;border-top:1px solid var(--border)">
+        <button class="btn-accent" id="generateBtn">⬇ Gerar index.html</button>
+        <div class="gen-note">Gera o viewer com todos os hotspots incluídos.<br>Faz upload para o GitHub como <strong>index.html</strong>.</div>
+        <div id="genMsgWrap">
+          <div class="gen-spin"></div>
+          <div class="gen-msg" id="genMsg">A gerar...</div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
+
 <script>
+// ── STATE ──
 const TOTAL = 34;
-const dataURLs = [];
-let totalFiles = 0;
+let dataURLs  = [];  // base64 frames
+let hotspots  = [];  // [{id, x, y, name, type, area, price, status, img, cta, ctaLink}]
+let currentFrame = 0;
+let selectedHs   = null;
+let addingMode   = true;
 
-const dropbox     = document.getElementById('dropbox');
-const fileInput   = document.getElementById('fileInput');
-const progWrap    = document.getElementById('progressWrap');
-const progFill    = document.getElementById('progFill');
-const progCount   = document.getElementById('progCount');
-const progEta     = document.getElementById('progEta');
-const previewGrid = document.getElementById('previewGrid');
-const gridLabel   = document.getElementById('gridLabel');
-const grid        = document.getElementById('grid');
-const genWrap     = document.getElementById('generateWrap');
-const genMsgWrap  = document.getElementById('generatingMsg');
-const genMsg      = document.getElementById('genMsg');
+// ── DOM ──
+const dropbox    = document.getElementById('dropbox');
+const fileInput  = document.getElementById('fileInput');
+const progWrap   = document.getElementById('progWrap');
+const progFill   = document.getElementById('progFill');
+const progCount  = document.getElementById('progCount');
+const progEta    = document.getElementById('progEta');
+const canvasWrap = document.getElementById('canvasWrap');
+const editorImg  = document.getElementById('editorImg');
+const frameSlider= document.getElementById('frameSlider');
+const frameInfo  = document.getElementById('frameInfo');
+const hsList     = document.getElementById('hsList');
+const hsEmpty    = document.getElementById('hsEmpty');
+const editForm   = document.getElementById('editForm');
+const noSelection= document.getElementById('noSelection');
+const imgPreview = document.getElementById('imgPreview');
+const imgUploadBtn=document.getElementById('imgUploadBtn');
+const imgFileInput=document.getElementById('imgFileInput');
 
+// ── STEP NAVIGATION ──
+function setStep(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById('snum'+i).className = 'step-num' + (i<n?' done':i===n?' active':'');
+    document.getElementById('slbl'+i).className = 'step-label' + (i===n?' active':'');
+  });
+  ['pageUpload','pageEditor'].forEach((id,i) => {
+    document.getElementById(id).classList.toggle('show', i+1===n);
+  });
+}
+
+// ── FILE UPLOAD ──
 document.getElementById('selectBtn').addEventListener('click', e => { e.stopPropagation(); fileInput.click(); });
 fileInput.addEventListener('change', e => { if(e.target.files.length>0) processFiles(e.target.files); });
 dropbox.addEventListener('dragover', e => { e.preventDefault(); dropbox.classList.add('over'); });
@@ -113,67 +352,204 @@ dropbox.addEventListener('dragleave', () => dropbox.classList.remove('over'));
 dropbox.addEventListener('drop', e => { e.preventDefault(); dropbox.classList.remove('over'); if(e.dataTransfer.files.length>0) processFiles(e.dataTransfer.files); });
 
 function processFiles(files) {
-  const sorted = Array.from(files).sort((a,b) => a.name.localeCompare(b.name,undefined,{numeric:true}));
+  const sorted = Array.from(files).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
   const toProcess = sorted.slice(0,TOTAL);
-  totalFiles = toProcess.length;
+  const total = toProcess.length;
   let done = 0, startTime = null;
-  dataURLs.length = 0;
-  grid.innerHTML = '';
+  dataURLs = [];
+  progWrap.style.display = 'flex';
+  progWrap.style.flexDirection = 'column';
   dropbox.style.display = 'none';
-  progWrap.classList.add('show');
-  previewGrid.classList.remove('show');
-  genWrap.classList.remove('show');
-  progCount.textContent = '0 / ' + totalFiles;
-  progFill.style.width = '0%';
-  progEta.textContent = '';
 
-  toProcess.forEach((file, i) => {
+  toProcess.forEach((file,i) => {
     const reader = new FileReader();
     reader.onload = e => {
       dataURLs[i] = e.target.result;
       done++;
-      if (!startTime && done===1) startTime = Date.now();
-      const pct = done/totalFiles;
+      if(!startTime && done===1) startTime = Date.now();
+      const pct = done/total;
       progFill.style.width = (pct*100)+'%';
-      progCount.textContent = done+' / '+totalFiles;
-      if (startTime && done>1 && done<totalFiles) {
-        const eta = Math.ceil((totalFiles-done)/(done/((Date.now()-startTime)/1000)));
+      progCount.textContent = done+' / '+total;
+      if(startTime && done>1 && done<total){
+        const eta = Math.ceil((total-done)/(done/((Date.now()-startTime)/1000)));
         progEta.textContent = eta<=1?'A terminar...':eta<60?'Faltam ~'+eta+'s':'Faltam ~'+Math.ceil(eta/60)+'min';
       }
-      const img = document.createElement('img');
-      img.src = e.target.result;
-      grid.appendChild(img);
-      if (done===totalFiles) {
+      if(done===total){
         progEta.textContent = 'Concluído!';
-        gridLabel.textContent = totalFiles+' frames prontas';
-        previewGrid.classList.add('show');
-        genWrap.classList.add('show');
-        setTimeout(()=>progWrap.classList.remove('show'),800);
+        frameSlider.max = total - 1;
+        editorImg.src = dataURLs[0];
+        setTimeout(()=>setStep(2), 600);
       }
     };
     reader.readAsDataURL(file);
   });
 }
 
+// ── FRAME NAVIGATION ──
+function goToFrame(n) {
+  currentFrame = Math.max(0, Math.min(dataURLs.length-1, n));
+  editorImg.src = dataURLs[currentFrame];
+  frameSlider.value = currentFrame;
+  frameInfo.textContent = 'Frame '+(currentFrame+1)+' / '+dataURLs.length;
+  renderDots();
+}
+frameSlider.addEventListener('input', () => goToFrame(parseInt(frameSlider.value)));
+document.getElementById('framePrev').addEventListener('click', () => goToFrame(currentFrame-1));
+document.getElementById('frameNext').addEventListener('click', () => goToFrame(currentFrame+1));
+
+// ── HOTSPOT CREATION (click on image) ──
+canvasWrap.addEventListener('click', e => {
+  if(e.target.classList.contains('hs-dot')) return; // clicking existing dot
+  const rect = canvasWrap.getBoundingClientRect();
+  const x = ((e.clientX - rect.left) / rect.width) * 100;
+  const y = ((e.clientY - rect.top)  / rect.height) * 100;
+  const hs = {
+    id: Date.now(),
+    x: parseFloat(x.toFixed(2)),
+    y: parseFloat(y.toFixed(2)),
+    name: 'Lote '+(hotspots.length+1),
+    type: '', area: '', price: '',
+    status: 'available', img: '', cta: 'Saber mais', ctaLink: ''
+  };
+  hotspots.push(hs);
+  renderDots();
+  renderList();
+  selectHotspot(hs.id);
+});
+
+// ── RENDER DOTS ──
+function renderDots() {
+  canvasWrap.querySelectorAll('.hs-dot').forEach(d=>d.remove());
+  hotspots.forEach((hs,i) => {
+    const dot = document.createElement('div');
+    dot.className = 'hs-dot' + (hs.status==='sold'?' sold':hs.status==='reserved'?' reserved':'') + (selectedHs===hs.id?' selected':'');
+    dot.style.left = hs.x + '%';
+    dot.style.top  = hs.y + '%';
+    dot.textContent = i+1;
+    dot.dataset.id = hs.id;
+    dot.addEventListener('click', e => { e.stopPropagation(); selectHotspot(hs.id); });
+    canvasWrap.appendChild(dot);
+  });
+}
+
+// ── RENDER LIST ──
+function renderList() {
+  hsList.innerHTML = '';
+  hsEmpty.style.display = hotspots.length ? 'none' : 'block';
+  hotspots.forEach((hs,i) => {
+    const item = document.createElement('div');
+    item.className = 'hs-list-item' + (selectedHs===hs.id?' selected':'');
+    item.innerHTML = `
+      <div class="hs-badge ${hs.status==='sold'?'sold':hs.status==='reserved'?'reserved':''}">${i+1}</div>
+      <div class="hs-item-name">${hs.name||'Sem nome'}</div>
+      <div class="hs-item-type">${hs.type||''}</div>
+      <button class="hs-del" data-id="${hs.id}" title="Eliminar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+      </button>`;
+    item.addEventListener('click', () => selectHotspot(hs.id));
+    item.querySelector('.hs-del').addEventListener('click', e => { e.stopPropagation(); deleteHotspot(hs.id); });
+    hsList.appendChild(item);
+  });
+}
+
+// ── SELECT HOTSPOT ──
+function selectHotspot(id) {
+  selectedHs = id;
+  const hs = hotspots.find(h=>h.id===id);
+  editForm.style.display = 'flex';
+  editForm.style.flexDirection = 'column';
+  noSelection.style.display = 'none';
+  document.getElementById('editFormTitle').textContent = 'Editar — '+(hs.name||'Hotspot');
+  document.getElementById('fName').value    = hs.name||'';
+  document.getElementById('fType').value    = hs.type||'';
+  document.getElementById('fArea').value    = hs.area||'';
+  document.getElementById('fPrice').value   = hs.price||'';
+  document.getElementById('fStatus').value  = hs.status||'available';
+  document.getElementById('fCta').value     = hs.cta||'';
+  document.getElementById('fCtaLink').value = hs.ctaLink||'';
+  if(hs.img){ imgPreview.src=hs.img; imgPreview.classList.add('show'); imgUploadBtn.textContent='Alterar imagem'; }
+  else { imgPreview.classList.remove('show'); imgUploadBtn.textContent='+ Adicionar imagem'; }
+  renderDots(); renderList();
+}
+
+// ── SAVE HOTSPOT ──
+document.getElementById('saveHsBtn').addEventListener('click', () => {
+  if(!selectedHs) return;
+  const hs = hotspots.find(h=>h.id===selectedHs);
+  hs.name    = document.getElementById('fName').value;
+  hs.type    = document.getElementById('fType').value;
+  hs.area    = document.getElementById('fArea').value;
+  hs.price   = document.getElementById('fPrice').value;
+  hs.status  = document.getElementById('fStatus').value;
+  hs.cta     = document.getElementById('fCta').value;
+  hs.ctaLink = document.getElementById('fCtaLink').value;
+  document.getElementById('editFormTitle').textContent = 'Editar — '+(hs.name||'Hotspot');
+  renderDots(); renderList();
+});
+
+// ── DELETE HOTSPOT ──
+document.getElementById('deleteHsBtn').addEventListener('click', () => {
+  if(!selectedHs) return;
+  deleteHotspot(selectedHs);
+});
+function deleteHotspot(id) {
+  hotspots = hotspots.filter(h=>h.id!==id);
+  if(selectedHs===id){ selectedHs=null; editForm.style.display='none'; noSelection.style.display='block'; }
+  renderDots(); renderList();
+}
+
+// ── IMAGE UPLOAD FOR HOTSPOT ──
+imgUploadBtn.addEventListener('click', () => imgFileInput.click());
+imgFileInput.addEventListener('change', e => {
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    if(selectedHs){ const hs=hotspots.find(h=>h.id===selectedHs); hs.img=ev.target.result; }
+    imgPreview.src=ev.target.result; imgPreview.classList.add('show');
+    imgUploadBtn.textContent='Alterar imagem';
+  };
+  reader.readAsDataURL(file);
+});
+
+// ── GENERATE ──
 document.getElementById('generateBtn').addEventListener('click', () => {
-  genWrap.classList.remove('show');
-  genMsgWrap.classList.add('show');
-  genMsg.textContent = 'A gerar ficheiro...';
-  setTimeout(() => {
-    try {
-      const html = buildEmbed(dataURLs);
+  // Auto-save current form
+  if(selectedHs){
+    const hs=hotspots.find(h=>h.id===selectedHs);
+    hs.name=document.getElementById('fName').value;
+    hs.type=document.getElementById('fType').value;
+    hs.area=document.getElementById('fArea').value;
+    hs.price=document.getElementById('fPrice').value;
+    hs.status=document.getElementById('fStatus').value;
+    hs.cta=document.getElementById('fCta').value;
+    hs.ctaLink=document.getElementById('fCtaLink').value;
+  }
+  document.getElementById('generateBtn').style.display='none';
+  document.getElementById('genMsgWrap').classList.add('show');
+  document.getElementById('genMsg').textContent='A gerar...';
+  setStep(3);
+  setTimeout(()=>{
+    try{
+      const html = buildEmbed(dataURLs, hotspots);
       const blob = new Blob([html],{type:'text/html'});
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
       a.href=url; a.download='index.html'; a.click();
       URL.revokeObjectURL(url);
-      genMsg.textContent = '✓ index.html gerado!';
-      setTimeout(()=>{ genMsgWrap.classList.remove('show'); genWrap.classList.add('show'); },2000);
-    } catch(e) { genMsg.textContent='Erro: '+e.message; }
-  },100);
+      document.getElementById('genMsg').textContent='✓ index.html gerado!';
+      document.getElementById('generateBtn').style.display='block';
+      document.getElementById('genMsgWrap').classList.remove('show');
+    }catch(e){
+      document.getElementById('genMsg').textContent='Erro: '+e.message;
+    }
+  },200);
 });
 
-function buildEmbed(images) {
+// ══════════════════════════════════════════
+// BUILD EMBED HTML
+// ══════════════════════════════════════════
+function buildEmbed(images, hs) {
+  const hsJSON = JSON.stringify(hs);
   return `<!DOCTYPE html>
 <html lang="pt">
 <head>
@@ -181,119 +557,137 @@ function buildEmbed(images) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Vista 360°</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap');
   *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
   :root {
     --bg:#f7f5f2; --white:#fff; --text:#1a1a1a;
     --muted:#9a9690; --accent:#c8a96e; --dark:#a8894e; --border:#e2ddd8;
+    --green:#4a9a6a; --red:#c05050; --orange:#c8963e;
     --bar: clamp(52px, 8vh, 68px);
   }
-  html, body {
-    width:100%; height:100%;
-    background:var(--bg);
-    font-family:'Jost',sans-serif;
-    overflow:hidden; color:var(--text);
-    position:fixed; inset:0;
-  }
+  html,body { width:100%; height:100%; background:var(--bg); font-family:'Jost',sans-serif; overflow:hidden; color:var(--text); position:fixed; inset:0; }
   #app { width:100%; height:100%; display:flex; flex-direction:column; }
 
   /* IMAGE AREA */
-  .imgarea {
-    flex:1; display:flex; align-items:center; justify-content:center;
-    overflow:hidden; position:relative; background:var(--bg); min-height:0;
-  }
-  /* Zoom container */
-  .zoom-wrap {
-    width:100%; height:100%;
-    display:flex; align-items:center; justify-content:center;
-    overflow:hidden; position:relative;
-  }
-  #display {
-    display:block;
-    max-width:100%; max-height:100%;
-    width:auto; height:auto;
-    object-fit:contain;
-    cursor:grab;
-    user-select:none; -webkit-user-drag:none;
-    transform-origin: center center;
-    transition: transform 0.15s ease;
-    will-change: transform;
-  }
-  #display.zoomed { cursor:move; }
+  .imgarea { flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; background:var(--bg); min-height:0; }
+  #display { display:block; max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; user-select:none; -webkit-user-drag:none; cursor:grab; transform-origin:center center; transition:transform .15s ease; }
   #display:active { cursor:grabbing; }
 
   /* Drag hint */
-  .hint {
-    position:absolute; bottom:clamp(10px,2vh,20px);
-    left:50%; transform:translateX(-50%);
-    background:rgba(255,255,255,.92); border:1px solid var(--border);
-    padding:clamp(7px,1.5vw,10px) clamp(12px,3vw,20px);
-    font-size:clamp(9px,1.5vw,11px); letter-spacing:.1em;
-    color:var(--muted); text-transform:uppercase;
-    pointer-events:none; white-space:nowrap;
-    display:flex; align-items:center; gap:6px;
-    transition:opacity .5s;
-  }
+  .hint { position:absolute; bottom:clamp(10px,2vh,20px); left:50%; transform:translateX(-50%); background:rgba(255,255,255,.92); border:1px solid var(--border); padding:8px 16px; font-size:clamp(9px,1.5vw,11px); letter-spacing:.1em; color:var(--muted); text-transform:uppercase; pointer-events:none; white-space:nowrap; display:flex; align-items:center; gap:6px; transition:opacity .5s; z-index:5; }
   .hint.gone { opacity:0; }
 
-  /* BOTTOM BAR */
-  .bottombar {
-    height:var(--bar);
-    background:var(--white); border-top:1px solid var(--border);
-    display:flex; align-items:center;
-    padding:0 clamp(10px,2.5vw,22px);
-    flex-shrink:0; gap:0;
-  }
-  .playctrls { display:flex; align-items:center; gap:2px; flex-shrink:0; }
-  .cbtn {
-    width:clamp(28px,5vw,36px); height:clamp(28px,5vw,36px);
+  /* ── HOTSPOT DOTS ── */
+  .hs-dot {
+    position:absolute;
+    transform:translate(-50%,-50%);
+    width:clamp(24px,3.5vw,32px); height:clamp(24px,3.5vw,32px);
+    border-radius:50%;
+    background:var(--accent); border:2px solid var(--white);
+    box-shadow:0 2px 10px rgba(0,0,0,.25);
     display:flex; align-items:center; justify-content:center;
-    background:none; border:1px solid transparent;
-    color:var(--muted); cursor:pointer;
-    transition:color .15s, border-color .15s, background .15s;
-    flex-shrink:0;
+    cursor:pointer; z-index:20;
+    transition:transform .2s, opacity .3s;
+    animation: hsIn .3s ease;
   }
+  .hs-dot::after {
+    content:'';
+    position:absolute; inset:-4px;
+    border-radius:50%;
+    border:2px solid var(--accent);
+    opacity:.4;
+    animation: pulse 2s infinite;
+  }
+  .hs-dot.sold { background:var(--red); }
+  .hs-dot.sold::after { border-color:var(--red); }
+  .hs-dot.reserved { background:var(--orange); }
+  .hs-dot.reserved::after { border-color:var(--orange); }
+  .hs-dot:hover { transform:translate(-50%,-50%) scale(1.15); }
+  .hs-dot.hidden-dot { opacity:0; pointer-events:none; }
+  .hs-num { font-size:clamp(9px,1.5vw,11px); font-weight:600; color:var(--white); line-height:1; }
+  @keyframes pulse { 0%,100%{transform:scale(1);opacity:.4} 50%{transform:scale(1.3);opacity:0} }
+  @keyframes hsIn { from{transform:translate(-50%,-50%) scale(0)} to{transform:translate(-50%,-50%) scale(1)} }
+
+  /* Dot label tooltip */
+  .hs-dot .hs-label {
+    position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%);
+    background:var(--text); color:var(--white);
+    font-size:10px; font-weight:500; letter-spacing:.05em;
+    padding:4px 8px; white-space:nowrap;
+    opacity:0; pointer-events:none; transition:opacity .15s;
+  }
+  .hs-dot .hs-label::after {
+    content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%);
+    border:4px solid transparent; border-top-color:var(--text);
+  }
+  .hs-dot:hover .hs-label { opacity:1; }
+
+  /* ── CARD ── */
+  #card {
+    position:absolute; z-index:50;
+    width:clamp(260px,35vw,320px);
+    background:var(--white);
+    border:1px solid var(--border);
+    box-shadow:0 8px 32px rgba(0,0,0,.12);
+    display:none; flex-direction:column;
+    animation:cardIn .2s ease;
+    max-height:90%;
+    overflow-y:auto;
+  }
+  #card.show { display:flex; }
+  @keyframes cardIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  .card-img { width:100%; height:clamp(100px,15vh,160px); object-fit:cover; display:none; }
+  .card-img.show { display:block; }
+  .card-img-placeholder { width:100%; height:80px; background:var(--bg); display:flex; align-items:center; justify-content:center; color:var(--border); }
+  .card-body { padding:clamp(12px,2vw,18px); display:flex; flex-direction:column; gap:10px; }
+  .card-header { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+  .card-name { font-family:'Cormorant Garamond',serif; font-size:clamp(16px,2.5vw,20px); font-weight:400; line-height:1.1; }
+  .card-close { background:none; border:none; cursor:pointer; color:var(--muted); padding:2px; display:flex; transition:color .15s; flex-shrink:0; }
+  .card-close:hover { color:var(--text); }
+  .card-close svg { width:14px; height:14px; }
+  .card-status { display:inline-flex; align-items:center; gap:5px; font-size:10px; font-weight:500; letter-spacing:.1em; text-transform:uppercase; }
+  .card-status-dot { width:7px; height:7px; border-radius:50%; }
+  .status-available .card-status-dot { background:var(--green); }
+  .status-available { color:var(--green); }
+  .status-sold .card-status-dot { background:var(--red); }
+  .status-sold { color:var(--red); }
+  .status-reserved .card-status-dot { background:var(--orange); }
+  .status-reserved { color:var(--orange); }
+  .card-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .card-field { display:flex; flex-direction:column; gap:2px; }
+  .card-field-label { font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+  .card-field-value { font-size:13px; font-weight:500; color:var(--text); }
+  .card-cta { display:block; text-align:center; text-decoration:none; font-size:11px; font-weight:500; letter-spacing:.15em; text-transform:uppercase; background:var(--text); color:var(--white); padding:12px; transition:background .2s; margin-top:4px; }
+  .card-cta:hover { background:var(--accent); }
+  .card-cta.sold-cta { background:var(--muted); pointer-events:none; }
+
+  /* ── BOTTOM BAR ── */
+  .bottombar { height:var(--bar); background:var(--white); border-top:1px solid var(--border); display:flex; align-items:center; padding:0 clamp(10px,2.5vw,22px); flex-shrink:0; }
+  .playctrls { display:flex; align-items:center; gap:2px; flex-shrink:0; }
+  .cbtn { width:clamp(28px,5vw,36px); height:clamp(28px,5vw,36px); display:flex; align-items:center; justify-content:center; background:none; border:1px solid transparent; color:var(--muted); cursor:pointer; transition:color .15s,border-color .15s,background .15s; flex-shrink:0; }
   .cbtn:hover { color:var(--text); border-color:var(--border); }
   .cbtn.on { color:var(--accent); border-color:var(--accent); background:#fdf8f0; }
   .cbtn svg { width:clamp(10px,2vw,13px); height:clamp(10px,2vw,13px); }
-  .playbtn {
-    width:clamp(34px,6vw,44px); height:clamp(34px,6vw,44px);
-    background:var(--text); border:none; color:var(--white);
-    cursor:pointer; display:flex; align-items:center; justify-content:center;
-    transition:background .2s; flex-shrink:0;
-  }
+  .playbtn { width:clamp(34px,6vw,44px); height:clamp(34px,6vw,44px); background:var(--text); border:none; color:var(--white); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .2s; flex-shrink:0; }
   .playbtn:hover { background:var(--dark); }
   .playbtn.on { background:var(--accent); }
   .playbtn svg { width:clamp(10px,2vw,14px); height:clamp(10px,2vw,14px); }
-
-  /* Zoom controls */
+  .vdiv { width:1px; height:clamp(20px,4vh,34px); background:var(--border); margin:0 clamp(8px,1.5vw,16px); flex-shrink:0; }
   .zoom-ctrls { display:flex; align-items:center; gap:2px; flex-shrink:0; }
-  .zoom-label {
-    font-size:clamp(9px,1.4vw,11px); font-weight:500;
-    color:var(--muted); min-width:clamp(28px,4vw,36px);
-    text-align:center; letter-spacing:.03em;
-  }
-
-  /* Divider */
-  .vdiv {
-    width:1px; height:clamp(20px,4vh,34px);
-    background:var(--border);
-    margin:0 clamp(8px,1.5vw,16px);
-    flex-shrink:0;
-  }
-
-  /* Right controls */
+  .zoom-label { font-size:clamp(9px,1.4vw,11px); font-weight:500; color:var(--muted); min-width:clamp(28px,4vw,36px); text-align:center; }
   .rctrls { display:flex; align-items:center; gap:clamp(2px,0.8vw,5px); flex-shrink:0; }
-  @media(max-width:400px) { .rctrls { display:none; } }
-
+  @media(max-width:400px){ .rctrls { display:none; } }
   @keyframes blink { 0%,100%{opacity:1}50%{opacity:.2} }
 </style>
 </head>
 <body>
 <div id="app">
-  <div class="imgarea">
-    <div class="zoom-wrap" id="zoomWrap">
-      <img id="display" draggable="false" alt="">
+  <div class="imgarea" id="imgarea">
+    <img id="display" draggable="false" alt="">
+    <!-- hotspot dots rendered by JS -->
+    <div id="card">
+      <!-- populated by JS -->
     </div>
     <div class="hint" id="hint">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -302,287 +696,192 @@ function buildEmbed(images) {
       Arrasta para explorar
     </div>
   </div>
-
   <div class="bottombar">
-    <!-- Play controls -->
     <div class="playctrls">
-      <button class="cbtn" id="prevBtn" aria-label="Anterior">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <button class="playbtn" id="playBtn" aria-label="Play/Pause">
-        <svg viewBox="0 0 24 24" fill="currentColor" id="playIcon"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-      </button>
-      <button class="cbtn" id="nextBtn" aria-label="Seguinte">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
+      <button class="cbtn" id="prevBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <button class="playbtn" id="playBtn"><svg viewBox="0 0 24 24" fill="currentColor" id="playIcon"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
+      <button class="cbtn" id="nextBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
     </div>
-
     <div class="vdiv"></div>
-
-    <!-- Zoom controls -->
     <div class="zoom-ctrls">
-      <button class="cbtn" id="zoomOutBtn" aria-label="Zoom out">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/>
-        </svg>
-      </button>
+      <button class="cbtn" id="zoomOutBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>
       <span class="zoom-label" id="zoomLabel">1×</span>
-      <button class="cbtn" id="zoomInBtn" aria-label="Zoom in">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
-        </svg>
-      </button>
+      <button class="cbtn" id="zoomInBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>
     </div>
-
     <div class="vdiv"></div>
-
-    <!-- Right controls -->
     <div class="rctrls">
-      <button class="cbtn" id="fsBtn" aria-label="Fullscreen">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
-          <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
-        </svg>
-      </button>
+      <button class="cbtn" id="fsBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
     </div>
   </div>
 </div>
-
 <script>
-const IMGS = ${JSON.stringify(images)};
-const TOTAL = IMGS.length;
+const IMGS      = ${JSON.stringify(images)};
+const HOTSPOTS  = ${hsJSON};
+const TOTAL     = IMGS.length;
 
-// State
-let current    = 0;
-let playing    = false;
-let playTimer  = null;
-let dir        = 1;
-let speed      = 1; // 1× = slow autoplay
+let current=0, playing=false, playTimer=null, dir=1, speed=1;
+let dragging=false, dragX=0, dragFrame=0, hintShown=false;
+let idleTimer=null;
+const IDLE_MS = 2*60*1000;
+let zoomLevel=1, panX=0, panY=0, isPanning=false;
+let panStartX=0, panStartY=0, panOriginX=0, panOriginY=0;
+const ZOOM_MIN=1, ZOOM_MAX=4, ZOOM_STEP=0.5;
 
-// Interaction / autoplay resume timer
-let idleTimer  = null;
-const IDLE_MS  = 2 * 60 * 1000; // 2 minutes
+const display   = document.getElementById('display');
+const hint      = document.getElementById('hint');
+const playBtn   = document.getElementById('playBtn');
+const playIcon  = document.getElementById('playIcon');
+const zoomLabel = document.getElementById('zoomLabel');
+const card      = document.getElementById('card');
+const imgarea   = document.getElementById('imgarea');
 
-// Drag
-let dragging   = false, dragX = 0, dragFrame = 0;
-let hintShown  = false;
+// ── BUILD HOTSPOT DOTS ──
+function buildDots() {
+  imgarea.querySelectorAll('.hs-dot').forEach(d=>d.remove());
+  HOTSPOTS.forEach((hs,i) => {
+    const dot = document.createElement('div');
+    dot.className = 'hs-dot' + (hs.status==='sold'?' sold':hs.status==='reserved'?' reserved':'');
+    dot.innerHTML = \`<span class="hs-num">\${i+1}</span><div class="hs-label">\${hs.name||'Unidade '+(i+1)}</div>\`;
+    dot.style.cssText = \`left:\${hs.x}%;top:\${hs.y}%;\`;
+    dot.addEventListener('click', e => { e.stopPropagation(); openCard(hs, dot); onUserInteract(); });
+    imgarea.appendChild(dot);
+  });
+}
 
-// Zoom
-let zoomLevel  = 1;
-const ZOOM_MIN = 1;
-const ZOOM_MAX = 4;
-const ZOOM_STEP = 0.5;
-let panX = 0, panY = 0;
-let isPanning = false, panStartX = 0, panStartY = 0, panOriginX = 0, panOriginY = 0;
+// ── OPEN CARD ──
+function openCard(hs, dotEl) {
+  const statusLabels = {available:'Disponível', sold:'Vendido', reserved:'Reservado'};
+  const ctaText = hs.status==='sold' ? 'Vendido' : (hs.cta||'Saber mais');
+  card.innerHTML = \`
+    \${hs.img ? \`<img class="card-img show" src="\${hs.img}" alt="">\` : \`<div class="card-img-placeholder"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="1"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>\`}
+    <div class="card-body">
+      <div class="card-header">
+        <div class="card-name">\${hs.name||'Unidade'}</div>
+        <button class="card-close" id="cardClose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="card-status status-\${hs.status||'available'}">
+        <div class="card-status-dot"></div>\${statusLabels[hs.status]||'Disponível'}
+      </div>
+      <div class="card-grid">
+        \${hs.type ? \`<div class="card-field"><div class="card-field-label">Tipologia</div><div class="card-field-value">\${hs.type}</div></div>\` : ''}
+        \${hs.area ? \`<div class="card-field"><div class="card-field-label">Área</div><div class="card-field-value">\${hs.area} m²</div></div>\` : ''}
+        \${hs.price ? \`<div class="card-field"><div class="card-field-label">Preço</div><div class="card-field-value">\${hs.price}</div></div>\` : ''}
+      </div>
+      \${(hs.cta||hs.ctaLink) ? \`<a class="card-cta \${hs.status==='sold'?'sold-cta':''}" href="\${hs.ctaLink||'#'}" target="_blank">\${ctaText}</a>\` : ''}
+    </div>\`;
+  card.classList.add('show');
+  document.getElementById('cardClose').addEventListener('click', ()=>card.classList.remove('show'));
 
-// DOM
-const display    = document.getElementById('display');
-const hint       = document.getElementById('hint');
-const playBtn    = document.getElementById('playBtn');
-const playIcon   = document.getElementById('playIcon');
-const zoomLabel  = document.getElementById('zoomLabel');
+  // Position card near dot but inside viewport
+  const dotRect  = dotEl.getBoundingClientRect();
+  const areaRect = imgarea.getBoundingClientRect();
+  let left = dotRect.right - areaRect.left + 10;
+  let top  = dotRect.top  - areaRect.top  - 20;
+  // Clamp to imgarea
+  const cardW = Math.min(320, areaRect.width * 0.9);
+  if (left + cardW > areaRect.width - 10)  left = dotRect.left - areaRect.left - cardW - 10;
+  if (top < 0) top = 0;
+  card.style.left = Math.max(0, left) + 'px';
+  card.style.top  = Math.max(0, top)  + 'px';
+  card.style.width = cardW + 'px';
+}
 
-// ── NAVIGATION ──
+// Close card when clicking image
+display.addEventListener('click', ()=>card.classList.remove('show'));
+
+// ── NAVIGATE ──
 function goTo(n) {
-  current = ((n % TOTAL) + TOTAL) % TOTAL;
+  current = ((n%TOTAL)+TOTAL)%TOTAL;
   display.src = IMGS[current];
 }
-
-// ── HINT ──
-function hideHint() {
-  if (!hintShown) { hintShown = true; hint.classList.add('gone'); }
-}
-
-// ── AUTOPLAY ──
-function startPlay() {
-  playing = true;
-  playBtn.classList.add('on');
-  playIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
-  // 1× speed = 14 fps feels too fast; use 7 fps for slow/cinematic feel
-  playTimer = setInterval(() => goTo(current + dir), 1000 / (speed * 7));
-}
-
-function stopPlay() {
-  playing = false;
-  clearInterval(playTimer);
-  playBtn.classList.remove('on');
-  playIcon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
-}
-
-// Called whenever user interacts — pauses autoplay and resets idle timer
-function onUserInteract() {
+function hideHint(){ if(!hintShown){hintShown=true;hint.classList.add('gone');} }
+function onUserInteract(){
   hideHint();
-  if (playing) stopPlay();
+  if(playing) stopPlay();
   clearTimeout(idleTimer);
-  idleTimer = setTimeout(() => {
-    startPlay();
-  }, IDLE_MS);
+  idleTimer = setTimeout(startPlay, IDLE_MS);
 }
 
-// ── DRAG TO ROTATE ──
-display.addEventListener('mousedown', e => {
-  if (zoomLevel > 1) return; // let panning handle it
-  dragging = true;
-  dragX = e.clientX;
-  dragFrame = current;
-  onUserInteract();
-  e.preventDefault();
+// ── DRAG ──
+display.addEventListener('mousedown', e=>{
+  if(zoomLevel>1){isPanning=true;panStartX=e.clientX;panStartY=e.clientY;panOriginX=panX;panOriginY=panY;e.preventDefault();return;}
+  dragging=true;dragX=e.clientX;dragFrame=current;onUserInteract();e.preventDefault();
 });
-window.addEventListener('mousemove', e => {
-  if (!dragging) return;
-  const sens = (display.offsetWidth || window.innerWidth) / TOTAL * 0.75;
-  goTo(dragFrame - Math.round((e.clientX - dragX) / sens) * dir);
+window.addEventListener('mousemove',e=>{
+  if(isPanning&&zoomLevel>1){panX=panOriginX+(e.clientX-panStartX);panY=panOriginY+(e.clientY-panStartY);clampPan();display.style.transform=\`scale(\${zoomLevel}) translate(\${panX/zoomLevel}px,\${panY/zoomLevel}px)\`;return;}
+  if(!dragging)return;
+  const sens=(display.offsetWidth||window.innerWidth)/TOTAL*0.75;
+  goTo(dragFrame-Math.round((e.clientX-dragX)/sens)*dir);
 });
-window.addEventListener('mouseup', () => { dragging = false; });
-
-display.addEventListener('touchstart', e => {
-  if (zoomLevel > 1) return;
-  if (e.touches.length !== 1) return;
-  dragging = true;
-  dragX = e.touches[0].clientX;
-  dragFrame = current;
-  onUserInteract();
-}, {passive:true});
-window.addEventListener('touchmove', e => {
-  if (!dragging || zoomLevel > 1) return;
-  const sens = (display.offsetWidth || window.innerWidth) / TOTAL * 0.75;
-  goTo(dragFrame - Math.round((e.touches[0].clientX - dragX) / sens) * dir);
-}, {passive:true});
-window.addEventListener('touchend', () => { dragging = false; });
+window.addEventListener('mouseup',()=>{dragging=false;isPanning=false;});
+display.addEventListener('touchstart',e=>{
+  if(e.touches.length!==1||zoomLevel>1)return;
+  dragging=true;dragX=e.touches[0].clientX;dragFrame=current;onUserInteract();
+},{passive:true});
+window.addEventListener('touchmove',e=>{
+  if(!dragging||zoomLevel>1)return;
+  const sens=(display.offsetWidth||window.innerWidth)/TOTAL*0.75;
+  goTo(dragFrame-Math.round((e.touches[0].clientX-dragX)/sens)*dir);
+},{passive:true});
+window.addEventListener('touchend',()=>{dragging=false;});
 
 // ── ZOOM ──
-function applyZoom(newZoom, cx, cy) {
-  const prev = zoomLevel;
-  zoomLevel = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, newZoom));
-
-  if (zoomLevel === 1) {
-    panX = 0; panY = 0;
-  } else if (cx !== undefined) {
-    // Zoom toward cursor/pinch center
-    const rect = display.getBoundingClientRect();
-    const ox = cx - (rect.left + rect.width  / 2);
-    const oy = cy - (rect.top  + rect.height / 2);
-    panX = (panX - ox) * (zoomLevel / prev) + ox;
-    panY = (panY - oy) * (zoomLevel / prev) + oy;
+function applyZoom(z,cx,cy){
+  const prev=zoomLevel;
+  zoomLevel=Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,z));
+  if(zoomLevel===1){panX=0;panY=0;}
+  else if(cx!==undefined){
+    const r=display.getBoundingClientRect();
+    const ox=cx-(r.left+r.width/2), oy=cy-(r.top+r.height/2);
+    panX=(panX-ox)*(zoomLevel/prev)+ox;
+    panY=(panY-oy)*(zoomLevel/prev)+oy;
   }
-
   clampPan();
-  display.style.transform = \`scale(\${zoomLevel}) translate(\${panX / zoomLevel}px, \${panY / zoomLevel}px)\`;
-  display.classList.toggle('zoomed', zoomLevel > 1);
-  zoomLabel.textContent = zoomLevel % 1 === 0 ? zoomLevel + '×' : zoomLevel.toFixed(1) + '×';
+  display.style.transform=\`scale(\${zoomLevel}) translate(\${panX/zoomLevel}px,\${panY/zoomLevel}px)\`;
+  display.classList.toggle('zoomed',zoomLevel>1);
+  zoomLabel.textContent=zoomLevel%1===0?zoomLevel+'×':zoomLevel.toFixed(1)+'×';
 }
-
-function clampPan() {
-  if (zoomLevel <= 1) { panX = 0; panY = 0; return; }
-  const rect = display.getBoundingClientRect();
-  const maxX = (rect.width  * (zoomLevel - 1)) / 2;
-  const maxY = (rect.height * (zoomLevel - 1)) / 2;
-  panX = Math.max(-maxX, Math.min(maxX, panX));
-  panY = Math.max(-maxY, Math.min(maxY, panY));
+function clampPan(){
+  if(zoomLevel<=1){panX=0;panY=0;return;}
+  const r=display.getBoundingClientRect();
+  const mx=(r.width*(zoomLevel-1))/2, my=(r.height*(zoomLevel-1))/2;
+  panX=Math.max(-mx,Math.min(mx,panX));
+  panY=Math.max(-my,Math.min(my,panY));
 }
-
-document.getElementById('zoomInBtn').addEventListener('click', () => {
-  onUserInteract();
-  applyZoom(zoomLevel + ZOOM_STEP);
-});
-document.getElementById('zoomOutBtn').addEventListener('click', () => {
-  onUserInteract();
-  applyZoom(zoomLevel - ZOOM_STEP);
-});
-
-// Scroll wheel — zoom when ctrl held, rotate otherwise
-display.addEventListener('wheel', e => {
+document.getElementById('zoomInBtn').addEventListener('click',()=>{onUserInteract();applyZoom(zoomLevel+ZOOM_STEP);});
+document.getElementById('zoomOutBtn').addEventListener('click',()=>{onUserInteract();applyZoom(zoomLevel-ZOOM_STEP);});
+display.addEventListener('wheel',e=>{
   e.preventDefault();
-  if (e.ctrlKey || e.metaKey || zoomLevel > 1) {
-    // Zoom toward cursor
-    const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
-    applyZoom(zoomLevel + delta, e.clientX, e.clientY);
-    onUserInteract();
-  } else {
-    goTo(current + (e.deltaY > 0 ? 1 : -1) * dir);
-    onUserInteract();
-  }
-}, {passive:false});
+  if(e.ctrlKey||e.metaKey||zoomLevel>1){applyZoom(zoomLevel+(e.deltaY>0?-ZOOM_STEP:ZOOM_STEP),e.clientX,e.clientY);onUserInteract();}
+  else{goTo(current+(e.deltaY>0?1:-1)*dir);onUserInteract();}
+},{passive:false});
+let pinchD0=0;
+display.addEventListener('touchstart',e=>{if(e.touches.length===2){dragging=false;pinchD0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);}},{passive:true});
+window.addEventListener('touchmove',e=>{if(e.touches.length===2){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);applyZoom(zoomLevel*(d/pinchD0),(e.touches[0].clientX+e.touches[1].clientX)/2,(e.touches[0].clientY+e.touches[1].clientY)/2);pinchD0=d;onUserInteract();}},{passive:true});
 
-// Panning when zoomed
-display.addEventListener('mousedown', e => {
-  if (zoomLevel <= 1) return;
-  isPanning = true;
-  panStartX = e.clientX;
-  panStartY = e.clientY;
-  panOriginX = panX;
-  panOriginY = panY;
-  e.preventDefault();
-});
-window.addEventListener('mousemove', e => {
-  if (!isPanning || zoomLevel <= 1) return;
-  panX = panOriginX + (e.clientX - panStartX);
-  panY = panOriginY + (e.clientY - panStartY);
-  clampPan();
-  display.style.transform = \`scale(\${zoomLevel}) translate(\${panX / zoomLevel}px, \${panY / zoomLevel}px)\`;
-});
-window.addEventListener('mouseup', () => { isPanning = false; });
-
-// Pinch to zoom (touch)
-let pinchDist0 = 0;
-display.addEventListener('touchstart', e => {
-  if (e.touches.length === 2) {
-    dragging = false;
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    pinchDist0 = Math.hypot(dx, dy);
-  }
-}, {passive:true});
-window.addEventListener('touchmove', e => {
-  if (e.touches.length === 2) {
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    const dist = Math.hypot(dx, dy);
-    const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-    const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-    applyZoom(zoomLevel * (dist / pinchDist0), cx, cy);
-    pinchDist0 = dist;
-    onUserInteract();
-  }
-}, {passive:true});
-
-// ── CONTROLS ──
-playBtn.addEventListener('click', () => {
-  if (playing) {
-    stopPlay();
-    clearTimeout(idleTimer); // manual pause — don't auto-resume
-  } else {
-    startPlay();
-    idleTimer = setTimeout(() => {}, 0); // clear any pending
-  }
+// ── PLAY ──
+function startPlay(){playing=true;playBtn.classList.add('on');playIcon.innerHTML='<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';playTimer=setInterval(()=>goTo(current+dir),1000/(speed*7));}
+function stopPlay(){playing=false;clearInterval(playTimer);playBtn.classList.remove('on');playIcon.innerHTML='<polygon points="5 3 19 12 5 21 5 3"/>';}
+playBtn.addEventListener('click',()=>{if(playing){stopPlay();clearTimeout(idleTimer);}else startPlay();});
+document.getElementById('prevBtn').addEventListener('click',()=>{onUserInteract();goTo(current-1);});
+document.getElementById('nextBtn').addEventListener('click',()=>{onUserInteract();goTo(current+1);});
+document.getElementById('fsBtn').addEventListener('click',()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.();});
+window.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'){onUserInteract();goTo(current-dir);}
+  if(e.key==='ArrowRight'){onUserInteract();goTo(current+dir);}
+  if(e.key==='+'||e.key==='='){onUserInteract();applyZoom(zoomLevel+ZOOM_STEP);}
+  if(e.key==='-'){onUserInteract();applyZoom(zoomLevel-ZOOM_STEP);}
+  if(e.key===' '){e.preventDefault();if(playing){stopPlay();clearTimeout(idleTimer);}else startPlay();}
 });
 
-document.getElementById('prevBtn').addEventListener('click', () => { onUserInteract(); goTo(current - 1); });
-document.getElementById('nextBtn').addEventListener('click', () => { onUserInteract(); goTo(current + 1); });
-
-document.getElementById('fsBtn').addEventListener('click', () => {
-  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
-  else document.exitFullscreen?.();
-});
-
-window.addEventListener('keydown', e => {
-  if (e.key === 'ArrowLeft')  { onUserInteract(); goTo(current - dir); }
-  if (e.key === 'ArrowRight') { onUserInteract(); goTo(current + dir); }
-  if (e.key === '+' || e.key === '=') { onUserInteract(); applyZoom(zoomLevel + ZOOM_STEP); }
-  if (e.key === '-') { onUserInteract(); applyZoom(zoomLevel - ZOOM_STEP); }
-  if (e.key === ' ') {
-    e.preventDefault();
-    if (playing) { stopPlay(); clearTimeout(idleTimer); }
-    else startPlay();
-  }
-});
-
-// ── INIT — autoplay immediately at 1× slow ──
+// ── INIT ──
+buildDots();
 display.src = IMGS[0];
 startPlay();
 <\/script>
 </body>
-</html>`;}
+</html>`;
+}
 </script>
 </body>
 </html>
