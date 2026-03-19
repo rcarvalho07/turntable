@@ -82,6 +82,19 @@ html,body{width:100%;height:100vh;background:var(--bg);font-family:'Jost',sans-s
 .fr input,.fr select{font-family:'Jost',sans-serif;font-size:11px;color:var(--text);border:1px solid var(--border);background:var(--bg);padding:5px 7px;outline:none;width:100%;transition:border-color .15s}
 .fr input:focus,.fr select:focus{border-color:var(--accent)}
 .img-up{width:100%;padding:6px;border:1px dashed var(--border);background:var(--bg);color:var(--muted);font-size:9px;cursor:pointer;text-align:center;transition:border-color .2s;font-family:'Jost',sans-serif}
+/* CTA Toggle */
+.cta-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:2px}
+.cta-toggle-label{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.toggle-wrap{display:flex;align-items:center;gap:7px}
+.toggle{position:relative;width:32px;height:18px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;background:var(--border);border-radius:9px;cursor:pointer;transition:background .2s}
+.toggle input:checked+.toggle-track{background:var(--accent)}
+.toggle-thumb{position:absolute;top:3px;left:3px;width:12px;height:12px;background:var(--white);border-radius:50%;transition:transform .2s;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle input:checked~.toggle-thumb{transform:translateX(14px)}
+.toggle-val{font-size:9px;color:var(--muted);letter-spacing:.06em;min-width:20px}
+.cta-fields{display:flex;flex-direction:column;gap:7px}
+.cta-fields.hidden{display:none}
 .img-up:hover{border-color:var(--accent);color:var(--accent)}
 .img-th{width:100%;height:50px;object-fit:cover;display:none;border:1px solid var(--border);margin-bottom:3px}
 .img-th.on{display:block}
@@ -243,8 +256,21 @@ html,body{width:100%;height:100vh;background:var(--bg);font-family:'Jost',sans-s
           <div class="img-up" id="cImBtn">+ Adicionar imagem</div>
           <input type="file" id="iInput" accept="image/*">
         </div>
-        <div class="fr"><label>Texto CTA</label><input type="text" id="cCt" placeholder="Saber mais"></div>
-        <div class="fr"><label>Link CTA</label><input type="text" id="cCl" placeholder="mailto:..."></div>
+        <div class="cta-toggle-row">
+          <span class="cta-toggle-label">Botão CTA</span>
+          <div class="toggle-wrap">
+            <span class="toggle-val" id="ctaToggleVal">Off</span>
+            <label class="toggle">
+              <input type="checkbox" id="ctaToggle">
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+          </div>
+        </div>
+        <div class="cta-fields hidden" id="ctaFields">
+          <div class="fr"><label>Texto CTA</label><input type="text" id="cCt" placeholder="Saber mais"></div>
+          <div class="fr"><label>Link CTA</label><input type="text" id="cCl" placeholder="mailto:..."></div>
+        </div>
         <button class="tb-btn accent" style="padding:9px;margin-top:2px" id="cSave">Guardar</button>
       </div>
     </div>
@@ -777,6 +803,11 @@ function openCardForm(id){
   document.getElementById('cA').value=u.area||'';
   document.getElementById('cP').value=u.price||'';
   document.getElementById('cSt').value=u.status||'available';
+  const ctaOn = u.ctaEnabled !== false && (u.cta || u.ctaLink);
+  const toggle = document.getElementById('ctaToggle');
+  toggle.checked = !!ctaOn;
+  document.getElementById('ctaToggleVal').textContent = ctaOn ? 'On' : 'Off';
+  document.getElementById('ctaFields').classList.toggle('hidden', !ctaOn);
   document.getElementById('cCt').value=u.cta||'';
   document.getElementById('cCl').value=u.ctaLink||'';
   const im=document.getElementById('cIm');
@@ -793,12 +824,20 @@ document.getElementById('cSave').addEventListener('click',()=>{
   u.area=document.getElementById('cA').value;
   u.price=document.getElementById('cP').value;
   u.status=document.getElementById('cSt').value;
+  u.ctaEnabled=document.getElementById('ctaToggle').checked;
   u.cta=document.getElementById('cCt').value;
   u.ctaLink=document.getElementById('cCl').value;
   renderUnitList();renderCardList();renderSvg();
   const b=document.getElementById('cSave');
   b.textContent='✓ Guardado';b.style.background='var(--green)';b.style.borderColor='var(--green)';
   setTimeout(()=>{b.textContent='Guardar';b.style.background='';b.style.borderColor='';},1400);
+});
+
+// CTA toggle
+document.getElementById('ctaToggle').addEventListener('change', function() {
+  const on = this.checked;
+  document.getElementById('ctaToggleVal').textContent = on ? 'On' : 'Off';
+  document.getElementById('ctaFields').classList.toggle('hidden', !on);
 });
 
 document.getElementById('cImBtn').addEventListener('click',()=>document.getElementById('iInput').click());
@@ -884,7 +923,7 @@ function doGen(){
   // Save open card form
   if(editCardId){
     const u=units.find(u=>u.id===editCardId);
-    if(u){u.name=document.getElementById('cN').value||u.name;u.type=document.getElementById('cTy').value;u.area=document.getElementById('cA').value;u.price=document.getElementById('cP').value;u.status=document.getElementById('cSt').value;u.cta=document.getElementById('cCt').value;u.ctaLink=document.getElementById('cCl').value;}
+    if(u){u.name=document.getElementById('cN').value||u.name;u.type=document.getElementById('cTy').value;u.area=document.getElementById('cA').value;u.price=document.getElementById('cP').value;u.status=document.getElementById('cSt').value;u.ctaEnabled=document.getElementById('ctaToggle').checked;u.cta=document.getElementById('cCt').value;u.ctaLink=document.getElementById('cCl').value;}
   }
   ['genBtn','genBtn2'].forEach(id=>{const b=document.getElementById(id);if(b)b.style.display='none';});
   document.getElementById('genSpin').style.display='flex';
@@ -1003,7 +1042,7 @@ const TOTAL=IMGS.length;
 let current=0,playing=false,playTimer=null,dir=1,speed=1;
 let dragging=false,dragX=0,dragFrame=0,hintShown=false;
 let idleTimer=null;const IDLE_MS=2*60*1000;
-let zoomLevel=1,panX=0,panY=0,isPanning=false;
+let zoomLevel=1.5,panX=0,panY=0,isPanning=false;
 let panStartX=0,panStartY=0,panOriginX=0,panOriginY=0;
 const ZOOM_MIN=1,ZOOM_MAX=4,ZOOM_STEP=0.25;
 const display=document.getElementById('display');
@@ -1116,7 +1155,9 @@ document.getElementById('prevBtn').addEventListener('click',()=>{onUserInteract(
 document.getElementById('nextBtn').addEventListener('click',()=>{onUserInteract();goTo(current+1);});
 document.getElementById('fsBtn').addEventListener('click',()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.();});
 window.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){onUserInteract();goTo(current-dir);}if(e.key==='ArrowRight'){onUserInteract();goTo(current+dir);}if(e.key==='+'||e.key==='='){onUserInteract();applyZoom(zoomLevel+ZOOM_STEP);}if(e.key==='-'){onUserInteract();applyZoom(zoomLevel-ZOOM_STEP);}if(e.key===' '){e.preventDefault();if(playing){stopPlay();clearTimeout(idleTimer);}else startPlay();}});
-display.src=IMGS[0];startPlay();
+display.src=IMGS[0];
+display.addEventListener('load',function initZoom(){applyZoom(1.5);display.removeEventListener('load',initZoom);},{once:true});
+startPlay();
 <\/script>
 </body>
 </html>`;
