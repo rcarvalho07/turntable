@@ -927,7 +927,7 @@ html,body{width:100%;height:100%;background:var(--bg);font-family:'Jost',sans-se
 .hz-poly:hover{fill:rgba(255,255,255,.28)}
 .hz-poly.sold:hover{fill:rgba(192,80,80,.18)}
 .hz-poly.reserved:hover{fill:rgba(200,150,62,.18)}
-.hz-card{position:absolute;z-index:50;width:clamp(220px,28vw,280px);background:var(--white);border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.10);display:none;flex-direction:column;pointer-events:none;animation:cardIn .15s ease}
+.hz-card{position:absolute;z-index:50;width:clamp(220px,28vw,280px);background:var(--white);border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.10);display:none;flex-direction:column;pointer-events:all;animation:cardIn .15s ease}
 .hz-card.visible{display:flex}
 @keyframes cardIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 .card-img{width:100%;height:clamp(80px,12vh,120px);object-fit:cover;display:none}
@@ -945,6 +945,9 @@ html,body{width:100%;height:100%;background:var(--bg);font-family:'Jost',sans-se
 .card-field-value{font-size:12px;font-weight:500;color:var(--text)}
 .card-cta{display:block;text-align:center;text-decoration:none;font-size:10px;font-weight:500;letter-spacing:.15em;text-transform:uppercase;background:var(--text);color:var(--white);padding:10px;transition:background .2s;pointer-events:all}
 .card-cta:hover{background:var(--accent)}.card-cta.disabled{background:var(--muted);pointer-events:none}
+.card-close-btn{position:absolute;top:8px;right:8px;width:24px;height:24px;background:rgba(0,0,0,.06);border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:background .15s,color .15s;flex-shrink:0}
+.card-close-btn:hover{background:rgba(0,0,0,.12);color:var(--text)}
+.card-close-btn svg{width:10px;height:10px}
 .hint{position:absolute;bottom:clamp(10px,2vh,20px);left:50%;transform:translateX(-50%);background:rgba(255,255,255,.92);border:1px solid var(--border);padding:8px 16px;font-size:clamp(9px,1.5vw,11px);letter-spacing:.1em;color:var(--muted);text-transform:uppercase;pointer-events:none;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:opacity .5s;z-index:5}
 .hint.gone{opacity:0}
 .bottombar{height:var(--bar);background:var(--white);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 clamp(10px,2.5vw,22px);flex-shrink:0}
@@ -1003,7 +1006,6 @@ let idleTimer=null;const IDLE_MS=2*60*1000;
 let zoomLevel=1,panX=0,panY=0,isPanning=false;
 let panStartX=0,panStartY=0,panOriginX=0,panOriginY=0;
 const ZOOM_MIN=1,ZOOM_MAX=4,ZOOM_STEP=0.5;
-let cardHideTimer=null;
 const display=document.getElementById('display');
 const hotzones=document.getElementById('hotzones');
 const imgWrap=document.getElementById('imgWrap');
@@ -1031,19 +1033,23 @@ function buildZones(){
     const poly=document.createElementNS('http://www.w3.org/2000/svg','polygon');
     poly.setAttribute('points',pts.map(p=>p.x+','+p.y).join(' '));
     poly.setAttribute('class','hz-poly'+(u.status==='sold'?' sold':u.status==='reserved'?' reserved':''));
-    poly.addEventListener('mouseenter',e=>showCard(u,e));
-    poly.addEventListener('mousemove',e=>moveCard(e));
-    poly.addEventListener('mouseleave',()=>scheduleHide());
+    poly.addEventListener('click',e=>{e.stopPropagation();openCard(u,e);});
     hotzones.appendChild(poly);
   });
 }
 
-function showCard(u,e){
-  clearTimeout(cardHideTimer);
+function closeCard(){hoverCard.classList.remove('visible');}
+
+function openCard(u,e){
   const sl={available:'Disponível',sold:'Vendido',reserved:'Reservado'};
   const dis=u.status==='sold';
   hoverCard.innerHTML=\`
     \${u.img?\`<img class="card-img show" src="\${u.img}" alt="">\`:''}
+    <button class="card-close-btn" id="cardCloseBtn" aria-label="Fechar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
     <div class="card-body">
       <div class="card-name">\${u.name||'Unidade'}</div>
       <div class="card-status status-\${u.status||'available'}">
@@ -1056,21 +1062,22 @@ function showCard(u,e){
       </div>
       \${u.cta||u.ctaLink?\`<a class="card-cta\${dis?' disabled':''}" href="\${dis?'#':(u.ctaLink||'#')}" target="\${dis?'_self':'_blank'}">\${dis?'Vendido':(u.cta||'Saber mais')}</a>\`:''}
     </div>\`;
-  hoverCard.classList.add('visible');positionCard(e);
-}
-function positionCard(e){
+  // Position near click point
   const ar=imgarea.getBoundingClientRect(),cw=Math.min(280,ar.width*.85);
   hoverCard.style.width=cw+'px';
   let lx=e.clientX-ar.left+18,ly=e.clientY-ar.top-30;
   if(lx+cw>ar.width-8)lx=e.clientX-ar.left-cw-18;
   if(ly<0)ly=4;if(ly+300>ar.height)ly=ar.height-310;
   hoverCard.style.left=Math.max(0,lx)+'px';hoverCard.style.top=Math.max(0,ly)+'px';
+  hoverCard.classList.add('visible');
+  // X button
+  document.getElementById('cardCloseBtn').addEventListener('click',e=>{e.stopPropagation();closeCard();});
 }
-function moveCard(e){if(hoverCard.classList.contains('visible'))positionCard(e);}
-function scheduleHide(){cardHideTimer=setTimeout(()=>hoverCard.classList.remove('visible'),120);}
-hoverCard.addEventListener('mouseenter',()=>clearTimeout(cardHideTimer));
-hoverCard.addEventListener('mouseleave',()=>scheduleHide());
-display.addEventListener('click',()=>hoverCard.classList.remove('visible'));
+
+// Close on click outside
+imgarea.addEventListener('click',e=>{
+  if(!hoverCard.contains(e.target))closeCard();
+});
 
 function goTo(n){
   current=((n%TOTAL)+TOTAL)%TOTAL;
