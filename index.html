@@ -30,9 +30,12 @@ html,body{width:100%;height:100vh;background:var(--bg);font-family:'Jost',sans-s
 
 /* CANVAS */
 .canvas-col{position:relative;background:#ddd;overflow:hidden;display:flex;align-items:center;justify-content:center}
-/* imgWrap auto-sizes to the image; SVG sits on top of it exactly */
 #imgWrap{transition:transform .1s ease}
 .canvas-col img{display:block;max-width:100%;max-height:100%;cursor:crosshair}
+
+/* Drawing cursor */
+.canvas-col.draw-mode{cursor:crosshair}
+.canvas-col.draw-mode img{cursor:crosshair}
 
 /* PANEL */
 .panel{background:var(--white);border-left:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column}
@@ -74,6 +77,10 @@ html,body{width:100%;height:100vh;background:var(--bg);font-family:'Jost',sans-s
 
 /* Draw instructions */
 .draw-hint{font-size:10px;color:var(--muted);line-height:1.7;padding:8px;background:var(--bg);border:1px solid var(--border);border-left:2px solid var(--accent)}
+.draw-step{display:flex;align-items:flex-start;gap:6px;margin:3px 0}
+.draw-step-num{background:var(--accent);color:var(--white);width:16px;height:16px;border-radius:50%;font-size:8px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.draw-step-text{font-size:10px;color:var(--text);line-height:1.5}
+.draw-point-count{font-size:11px;font-weight:600;color:var(--accent);text-align:center;padding:4px 0}
 
 /* Form fields */
 .fg2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
@@ -99,6 +106,10 @@ html,body{width:100%;height:100vh;background:var(--bg);font-family:'Jost',sans-s
 .img-th{width:100%;height:50px;object-fit:cover;display:none;border:1px solid var(--border);margin-bottom:3px}
 .img-th.on{display:block}
 
+/* Copy zone button */
+.copy-zone-row{display:flex;gap:5px;margin-top:4px}
+.copy-zone-row .tb-btn{flex:1;padding:6px;font-size:8px;text-align:center}
+
 /* BOTTOM / TIMELINE */
 .timeline{grid-column:1/-1;background:var(--text);display:flex;align-items:center;padding:0 14px;gap:14px}
 .tl-info{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4);display:flex;align-items:center;gap:5px}
@@ -110,12 +121,12 @@ html,body{width:100%;height:100vh;background:var(--bg);font-family:'Jost',sans-s
 .z-fill:hover{fill:rgba(200,169,110,.22)}
 .z-fill.active{fill:rgba(200,169,110,.28);stroke:var(--accent);stroke-width:1.5px;vector-effect:non-scaling-stroke}
 .z-lbl{pointer-events:none;font-family:'Jost',sans-serif;font-weight:600;font-size:2px;fill:rgba(200,169,110,.9)}
-/* Handles use px so they stay tiny regardless of zoom */
 .v-handle{fill:var(--accent);stroke:var(--white);stroke-width:1px;vector-effect:non-scaling-stroke;cursor:move}
 .v-handle:hover{fill:var(--dark)}
-.dp-preview{fill:rgba(200,169,110,.08);stroke:rgba(200,169,110,.6);stroke-width:1px;vector-effect:non-scaling-stroke;stroke-dasharray:3 2;pointer-events:none}
-.dp-point{fill:var(--accent);stroke:var(--white);stroke-width:1px;vector-effect:non-scaling-stroke;pointer-events:none}
-.close-hint{fill:rgba(200,169,110,.25);stroke:var(--accent);stroke-width:1px;vector-effect:non-scaling-stroke;pointer-events:none;stroke-dasharray:2 2}
+.dp-preview{fill:rgba(200,169,110,.12);stroke:rgba(200,169,110,.7);stroke-width:1.2px;vector-effect:non-scaling-stroke;stroke-dasharray:4 2;pointer-events:none}
+.dp-point{fill:var(--accent);stroke:var(--white);stroke-width:1.5px;vector-effect:non-scaling-stroke;cursor:move}
+.dp-line{stroke:rgba(200,169,110,.5);stroke-width:0.8px;vector-effect:non-scaling-stroke;stroke-dasharray:3 2;pointer-events:none}
+.close-hint{fill:rgba(200,169,110,.3);stroke:var(--accent);stroke-width:1.5px;vector-effect:non-scaling-stroke;pointer-events:none;stroke-dasharray:2 2}
 
 /* Upload overlay */
 #uploadOv{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center}
@@ -134,9 +145,15 @@ html,body{width:100%;height:100vh;background:var(--bg);font-family:'Jost',sans-s
 .pb-txt{font-size:12px;font-weight:500;color:var(--text)}
 .pb-eta{font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
 #fInput,#iInput{display:none}
+
+/* Toast notification */
+.toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--white);padding:8px 16px;font-size:11px;border-radius:4px;opacity:0;transition:all .3s;z-index:100;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
+
+<div class="toast" id="toast"></div>
 
 <!-- UPLOAD -->
 <div id="uploadOv">
@@ -183,7 +200,6 @@ html,body{width:100%;height:100vh;background:var(--bg);font-family:'Jost',sans-s
 
   <!-- CANVAS -->
   <div class="canvas-col" id="canvasCol">
-    <!-- img-wrap is sized to the natural image bounds; SVG sits exactly on top -->
     <div id="imgWrap" style="position:relative;display:inline-block;line-height:0;transform-origin:center center">
       <img id="cImg" src="" alt="" draggable="false" style="display:block;max-width:100%;max-height:100%;user-select:none;-webkit-user-drag:none">
       <svg id="oSvg" viewBox="0 0 100 100" preserveAspectRatio="none"
@@ -210,7 +226,7 @@ html,body{width:100%;height:100vh;background:var(--bg);font-family:'Jost',sans-s
       <!-- Frame grid for selected unit -->
       <div class="ps" id="fgSection" style="display:none">
         <div class="ps-hd">
-          Frames mapeadas — <span id="fgUnitName" style="color:var(--accent)">—</span>
+          Frames — <span id="fgUnitName" style="color:var(--accent)">—</span>
           <span id="fgProgress" style="font-size:9px;color:var(--muted)">0/34</span>
         </div>
         <div class="fp-wrap">
@@ -218,12 +234,28 @@ html,body{width:100%;height:100vh;background:var(--bg);font-family:'Jost',sans-s
           <div class="fp-label"><span id="fpLbl">0 de 34 frames mapeadas</span><span id="fpPct">0%</span></div>
         </div>
         <div class="fg" id="fGrid"></div>
-        <div id="drawHint" class="draw-hint" style="display:none">
-          Clica para adicionar pontos · <strong>duplo-clique</strong> ou <strong>Enter</strong> para fechar · arrasta pontos para ajustar
+
+        <!-- Draw section -->
+        <div id="drawSection" style="display:none">
+          <div class="draw-hint" id="drawHint">
+            <div class="draw-step"><div class="draw-step-num">1</div><div class="draw-step-text">Clica no canvas para marcar os cantos da zona</div></div>
+            <div class="draw-step"><div class="draw-step-num">2</div><div class="draw-step-text">Mínimo 3 pontos — arrasta para ajustar</div></div>
+            <div class="draw-step"><div class="draw-step-num">3</div><div class="draw-step-text"><strong>Duplo-clique</strong>, <strong>Enter</strong> ou clica no 1º ponto para fechar</div></div>
+            <div class="draw-point-count" id="drawPtCount"></div>
+          </div>
+          <div style="display:flex;gap:5px;margin-top:6px" id="drawBtns">
+            <button class="tb-btn" id="cancelDraw" style="flex:1;padding:7px">✕ Cancelar</button>
+            <button class="tb-btn accent" id="confirmDraw" style="flex:1;padding:7px" disabled>✓ Confirmar</button>
+          </div>
         </div>
-        <div style="display:flex;gap:5px" id="drawBtns" style="display:none">
-          <button class="tb-btn" id="cancelDraw" style="flex:1;padding:7px">Cancelar</button>
-          <button class="tb-btn accent" id="confirmDraw" style="flex:1;padding:7px">✓ Confirmar</button>
+
+        <!-- Copy zone tools -->
+        <div class="copy-zone-row" id="copyZoneRow" style="display:none">
+          <button class="tb-btn" id="copyToPrevBtn" title="Copiar zona para a frame anterior">← Copiar p/ anterior</button>
+          <button class="tb-btn" id="copyToNextBtn" title="Copiar zona para a próxima frame">Copiar p/ seguinte →</button>
+        </div>
+        <div class="copy-zone-row" id="copyAllRow" style="display:none">
+          <button class="tb-btn" id="copyToAllBtn" title="Copiar esta zona para todas as frames vazias" style="flex:1">Copiar para todas as frames vazias</button>
         </div>
       </div>
     </div>
@@ -279,7 +311,7 @@ html,body{width:100%;height:100vh;background:var(--bg);font-family:'Jost',sans-s
     <div id="p3" style="display:none;padding:14px;flex-direction:column;gap:10px">
       <div style="font-size:10px;color:var(--muted);line-height:1.7">
         Gera um <strong>index.html</strong> com todas as imagens e zonas incorporadas.<br>
-        Cada zona tem coordenadas <strong>exatas por frame</strong> — seguem a rotação com precisão total.
+        Cada zona tem coordenadas <strong>exatas por frame</strong>.
       </div>
       <div style="font-size:10px;color:var(--muted);line-height:1.6;padding:8px 10px;border-left:2px solid var(--accent);background:var(--bg)" id="exportSummary"></div>
       <button class="tb-btn accent" style="padding:11px" id="genBtn2">⬇ Gerar index.html</button>
@@ -292,7 +324,7 @@ html,body{width:100%;height:100vh;background:var(--bg);font-family:'Jost',sans-s
     <div class="tl-info">Frame <strong id="tlFrame">1</strong> / <strong id="tlTotal">34</strong></div>
     <div class="tl-info">Unidade <strong id="tlUnit">—</strong></div>
     <div class="tl-info" id="tlMapped" style="display:none">Esta frame <strong style="color:var(--green)">✓ mapeada</strong></div>
-    <div class="tl-hint" id="tlHint">← → navegar · arrasta imagem para rodar · D = desenhar nesta frame</div>
+    <div class="tl-hint" id="tlHint">← → navegar · arrasta imagem para rodar · D = desenhar</div>
   </div>
 
 </div>
@@ -302,25 +334,33 @@ html,body{width:100%;height:100vh;background:var(--bg);font-family:'Jost',sans-s
 // STATE
 // ═══════════════════════════════════
 const TOTAL = 34;
-let frames   = [];   // dataURL[]
-let units    = [];   // { id, name, type, area, price, status, img, cta, ctaLink, frames: {[idx]: [{x,y}]} }
-let activeId = null; // selected unit id
+let frames = [];
+let units = [];
+let activeId = null;
 let editCardId = null;
 let curFrame = 0;
 let tab = 1;
-// Drawing
 let drawing = false;
 let dPts = [];
-// Vertex dragging
-let vDrag = null; // {unitId, frameIdx, ptIdx}
-
+let vDrag = null;
 let uid = 1;
+
+// ═══════════════════════════════════
+// TOAST
+// ═══════════════════════════════════
+function showToast(msg, duration=2000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), duration);
+}
 
 // ═══════════════════════════════════
 // UPLOAD
 // ═══════════════════════════════════
 const dropbox = document.getElementById('dropbox');
-const fInput  = document.getElementById('fInput');
+const fInput = document.getElementById('fInput');
 document.getElementById('selBtn').addEventListener('click', e=>{e.stopPropagation();fInput.click();});
 fInput.addEventListener('change', e=>{if(e.target.files.length)loadFiles(e.target.files);});
 dropbox.addEventListener('dragover', e=>{e.preventDefault();dropbox.classList.add('over');});
@@ -348,7 +388,7 @@ function loadFiles(files){
       }
       if(done===toLoad.length){
         document.getElementById('pbEta').textContent='✓';
-        setTimeout(()=>{ document.getElementById('uploadOv').classList.add('gone'); gotoFrame(0); },300);
+        setTimeout(()=>{document.getElementById('uploadOv').classList.add('gone');gotoFrame(0);},300);
       }
     };
     r.readAsDataURL(file);
@@ -382,6 +422,7 @@ function gotoFrame(n){
   updateFrameStatus();
   renderFGrid();
   renderSvg();
+  updateCopyButtons();
 }
 
 function updateFrameStatus(){
@@ -390,12 +431,11 @@ function updateFrameStatus(){
   document.getElementById('tlMapped').style.display = mapped ? 'flex' : 'none';
 }
 
-// Drag image to rotate (only when not zoomed and not panning)
+// Drag to rotate
 let imgDrag=false, imgDragX=0, imgDragF=0;
 cImg.addEventListener('mousedown',e=>{
   if(drawing||edPanning||e.button!==0||e.altKey)return;
   if(edZoom>1){
-    // Pan instead of rotate when zoomed
     edPanning=true;edPanSX=e.clientX;edPanSY=e.clientY;edPanOX=edPanX;edPanOY=edPanY;
     e.preventDefault();return;
   }
@@ -408,27 +448,36 @@ window.addEventListener('mousemove',e=>{
   const cc=Math.max(0,Math.min(frames.length-1,((n%TOTAL)+TOTAL)%TOTAL));
   if(cc!==curFrame)gotoFrame(cc);
 });
-window.addEventListener('mouseup',()=>{ imgDrag=false; });
+window.addEventListener('mouseup',()=>{imgDrag=false;});
 
 window.addEventListener('keydown',e=>{
   if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return;
-  if(e.ctrlKey||e.metaKey)return; // handled by zoom listener
+  if(e.ctrlKey||e.metaKey)return;
   if(e.key==='ArrowLeft'&&!drawing)gotoFrame(curFrame-1);
   if(e.key==='ArrowRight'&&!drawing)gotoFrame(curFrame+1);
   if(e.key==='d'&&activeId&&!drawing)startDraw();
   if(e.key==='Enter'&&drawing&&dPts.length>=3)confirmDraw();
-  if(e.key==='Escape'){if(drawing)cancelDraw();else if(edZoom>1){edZoom=1;edPanX=0;edPanY=0;applyEditorTransform();}}
+  if(e.key==='Escape'){
+    if(drawing)cancelDraw();
+    else if(edZoom>1){edZoom=1;edPanX=0;edPanY=0;applyEditorTransform();}
+  }
+  // Delete last point with Backspace during draw
+  if(e.key==='Backspace'&&drawing&&dPts.length>0){
+    dPts.pop();
+    updateDrawPointCount();
+    renderSvg();
+  }
 });
 
 // ═══════════════════════════════════
 // UNITS
 // ═══════════════════════════════════
 document.getElementById('addBtn').addEventListener('click',()=>{
-  const u={id:uid++, name:'Lote '+uid, type:'', area:'', price:'', status:'available', img:'', cta:'Saber mais', ctaLink:'', frames:{}};
+  const u={id:uid++, name:'Lote '+(units.length+1), type:'', area:'', price:'', status:'available', img:'', ctaEnabled:false, cta:'Saber mais', ctaLink:'', frames:{}};
   units.push(u);
   selectUnit(u.id);
   renderUnitList();
-  // Auto-start draw
+  showToast('Unidade criada — desenha a zona no canvas');
   startDraw();
 });
 
@@ -442,6 +491,7 @@ function selectUnit(id){
   renderFGrid();
   renderSvg();
   updateFrameStatus();
+  updateCopyButtons();
 }
 
 function renderUnitList(){
@@ -490,53 +540,100 @@ function renderFGrid(){
     const btn=document.createElement('button');
     const hasPts=u&&u.frames[i];
     btn.className='fb'+(hasPts?' mapped':'')+(i===curFrame?' cur':'');
-    btn.title='Frame '+i+(hasPts?' ✓':'');
+    btn.title='Frame '+(i+1)+(hasPts?' ✓':'');
     btn.addEventListener('click',()=>{
       gotoFrame(i);
-      if(activeId){
-        if(u&&u.frames[i]){
-          // Frame already mapped — go to edit mode (show vertex handles)
-          renderSvg();
-        } else {
-          startDraw();
-        }
-      }
     });
     grid.appendChild(btn);
   }
 }
 
 // ═══════════════════════════════════
+// COPY ZONE TOOLS
+// ═══════════════════════════════════
+function updateCopyButtons() {
+  const u = units.find(u=>u.id===activeId);
+  const hasCurrent = u && u.frames[curFrame];
+  document.getElementById('copyZoneRow').style.display = hasCurrent && !drawing ? 'flex' : 'none';
+  document.getElementById('copyAllRow').style.display = hasCurrent && !drawing ? 'flex' : 'none';
+}
+
+document.getElementById('copyToPrevBtn').addEventListener('click', () => {
+  const u = units.find(u=>u.id===activeId);
+  if (!u || !u.frames[curFrame] || curFrame <= 0) return;
+  const target = curFrame - 1;
+  u.frames[target] = u.frames[curFrame].map(p=>({...p}));
+  gotoFrame(target);
+  showToast('Zona copiada para frame ' + (target+1));
+});
+
+document.getElementById('copyToNextBtn').addEventListener('click', () => {
+  const u = units.find(u=>u.id===activeId);
+  if (!u || !u.frames[curFrame] || curFrame >= TOTAL-1) return;
+  const target = curFrame + 1;
+  u.frames[target] = u.frames[curFrame].map(p=>({...p}));
+  gotoFrame(target);
+  showToast('Zona copiada para frame ' + (target+1));
+});
+
+document.getElementById('copyToAllBtn').addEventListener('click', () => {
+  const u = units.find(u=>u.id===activeId);
+  if (!u || !u.frames[curFrame]) return;
+  let count = 0;
+  for (let i=0; i<TOTAL; i++) {
+    if (!u.frames[i]) {
+      u.frames[i] = u.frames[curFrame].map(p=>({...p}));
+      count++;
+    }
+  }
+  renderFGrid();
+  updateCopyButtons();
+  showToast(count + ' frames preenchidas');
+});
+
+// ═══════════════════════════════════
 // DRAW
 // ═══════════════════════════════════
+function updateDrawPointCount() {
+  const el = document.getElementById('drawPtCount');
+  if (dPts.length === 0) el.textContent = '';
+  else if (dPts.length < 3) el.textContent = dPts.length + ' ponto' + (dPts.length>1?'s':'') + ' — faltam ' + (3-dPts.length);
+  else el.textContent = dPts.length + ' pontos ✓ pronto para fechar';
+  document.getElementById('confirmDraw').disabled = dPts.length < 3;
+}
+
 function startDraw(){
   if(!activeId)return;
   const u=units.find(u=>u.id===activeId);
-  // If frame already has points, copy them for editing
   dPts = u&&u.frames[curFrame] ? [...u.frames[curFrame].map(p=>({...p}))] : [];
   drawing=true;
+  document.getElementById('canvasCol').classList.add('draw-mode');
   document.getElementById('modePill').className='mode-pill draw';
   document.getElementById('modePill').textContent='Desenhar';
-  document.getElementById('drawHint').style.display='block';
-  document.getElementById('drawBtns').style.display='flex';
-  document.getElementById('tlHint').textContent='Clica para pontos · duplo-clique / Enter para fechar · arrasta pontos';
+  document.getElementById('drawSection').style.display='block';
+  document.getElementById('copyZoneRow').style.display='none';
+  document.getElementById('copyAllRow').style.display='none';
+  document.getElementById('tlHint').textContent='Clica para pontos · Backspace = apagar último · Enter/duplo-clique = fechar';
+  updateDrawPointCount();
   renderSvg();
 }
 
 function cancelDraw(){
   drawing=false; dPts=[];
+  document.getElementById('canvasCol').classList.remove('draw-mode');
   document.getElementById('modePill').className='mode-pill navigate';
   document.getElementById('modePill').textContent='Navegar';
-  document.getElementById('drawHint').style.display='none';
-  document.getElementById('drawBtns').style.display='none';
-  document.getElementById('tlHint').textContent='← → navegar · arrasta imagem · D = desenhar nesta frame';
+  document.getElementById('drawSection').style.display='none';
+  document.getElementById('tlHint').textContent='← → navegar · arrasta imagem · D = desenhar';
   renderSvg();
+  updateCopyButtons();
 }
 
 function confirmDraw(){
   if(!activeId||dPts.length<3)return;
   const u=units.find(u=>u.id===activeId);
   u.frames[curFrame]=[...dPts.map(p=>({...p}))];
+  showToast('Zona guardada na frame ' + (curFrame+1));
   cancelDraw();
   renderFGrid();
   updateFrameStatus();
@@ -546,7 +643,7 @@ document.getElementById('cancelDraw').addEventListener('click',cancelDraw);
 document.getElementById('confirmDraw').addEventListener('click',confirmDraw);
 
 // ═══════════════════════════════════
-// ZOOM / PAN (editor canvas)
+// ZOOM / PAN (editor)
 // ═══════════════════════════════════
 let edZoom = 1, edPanX = 0, edPanY = 0;
 let edPanning = false, edPanSX = 0, edPanSY = 0, edPanOX = 0, edPanOY = 0;
@@ -580,12 +677,8 @@ function applyEditorZoom(delta, cx, cy) {
   }
   clampEdPan();
   applyEditorTransform();
-  document.getElementById('tlHint').textContent =
-    edZoom > 1 ? `Zoom ${edZoom.toFixed(1)}× · Ctrl+scroll ou pinch · duplo-clique para reset`
-               : '← → navegar · Ctrl+scroll para zoom · D = desenhar nesta frame';
 }
 
-// Wheel zoom — Ctrl+scroll always zooms, plain scroll rotates frames
 document.getElementById('canvasCol').addEventListener('wheel', e => {
   e.preventDefault();
   if (e.ctrlKey || e.metaKey || edZoom > 1) {
@@ -595,14 +688,13 @@ document.getElementById('canvasCol').addEventListener('wheel', e => {
   }
 }, { passive: false });
 
-// Double-click to reset zoom
 document.getElementById('canvasCol').addEventListener('dblclick', e => {
+  if (drawing) return; // don't reset zoom during draw
   if (e.target === cImg || e.target === oSvg || e.target.closest('#imgWrap')) {
-    if (edZoom > 1 && !drawing) { edZoom = 1; edPanX = 0; edPanY = 0; applyEditorTransform(); }
+    if (edZoom > 1) { edZoom = 1; edPanX = 0; edPanY = 0; applyEditorTransform(); }
   }
 });
 
-// Middle-mouse or space+drag to pan
 document.getElementById('canvasCol').addEventListener('mousedown', e => {
   if (e.button === 1 || (e.button === 0 && e.altKey)) {
     edPanning = true; edPanSX = e.clientX; edPanSY = e.clientY; edPanOX = edPanX; edPanOY = edPanY;
@@ -617,7 +709,6 @@ window.addEventListener('mousemove', e => {
 });
 window.addEventListener('mouseup', e => { if (e.button === 1 || edPanning) edPanning = false; });
 
-// Touch pinch zoom
 let edPinchD0 = 0;
 document.getElementById('canvasCol').addEventListener('touchstart', e => {
   if (e.touches.length === 2) {
@@ -636,7 +727,6 @@ document.getElementById('canvasCol').addEventListener('touchmove', e => {
   }
 }, { passive: false });
 
-// Keyboard zoom shortcuts
 window.addEventListener('keydown', e => {
   if (['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) return;
   if ((e.key === '+' || e.key === '=') && e.ctrlKey) { e.preventDefault(); applyEditorZoom(ZOOM_STEP); }
@@ -645,77 +735,85 @@ window.addEventListener('keydown', e => {
 });
 
 // ═══════════════════════════════════
-// SVG — coords always relative to the img (not the col)
+// SVG
 // ═══════════════════════════════════
 function svgXY(e) {
-  // oSvg is 100%×100% of cImg, so we use cImg bounds directly
   const r = cImg.getBoundingClientRect();
   return {
-    x: parseFloat((((e.clientX - r.left) / r.width)  * 100).toFixed(2)),
-    y: parseFloat((((e.clientY - r.top)  / r.height) * 100).toFixed(2))
+    x: parseFloat((((e.clientX - r.left) / r.width) * 100).toFixed(2)),
+    y: parseFloat((((e.clientY - r.top) / r.height) * 100).toFixed(2))
   };
 }
 
-// ResizeObserver to re-render SVG whenever the image box changes
 const roImg = new ResizeObserver(() => renderSvg());
 roImg.observe(cImg);
 
 function renderSvg() {
   oSvg.innerHTML = '';
-  // All units (non-active, this frame)
+  // Non-active units
   units.forEach((u, i) => {
     if (u.id === activeId) return;
     const pts = u.frames[curFrame];
     if (!pts || pts.length < 3) return;
     const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-    poly.setAttribute('points', pts.map(p => p.x + ',' + p.y).join(' '));
+    poly.setAttribute('points', pts.map(p => p.x+','+p.y).join(' '));
     poly.setAttribute('class', 'z-fill');
     poly.addEventListener('click', () => { if (!drawing) selectUnit(u.id); });
     oSvg.appendChild(poly);
-    addLabel(pts, i + 1);
+    addLabel(pts, u.name || (i+1));
   });
 
   // Active unit
   if (activeId) {
     const u = units.find(u => u.id === activeId);
-    const uIdx = units.indexOf(u) + 1;
     if (!drawing) {
       const pts = u.frames[curFrame];
       if (pts && pts.length >= 3) {
         const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        poly.setAttribute('points', pts.map(p => p.x + ',' + p.y).join(' '));
+        poly.setAttribute('points', pts.map(p => p.x+','+p.y).join(' '));
         poly.setAttribute('class', 'z-fill active');
         oSvg.appendChild(poly);
         pts.forEach((p, i) => {
           const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
           circle.setAttribute('cx', p.x); circle.setAttribute('cy', p.y);
-          circle.setAttribute('r', '0.7'); // 0.7% of image — stays small at all zoom levels
+          circle.setAttribute('r', '0.7');
           circle.setAttribute('class', 'v-handle');
           circle.dataset.ptIdx = i;
           oSvg.appendChild(circle);
         });
-        addLabel(pts, uIdx);
+        addLabel(pts, u.name);
       }
     } else {
-      // Drawing preview polygon
+      // Drawing mode
+      // Lines between points
       if (dPts.length > 1) {
+        for (let i=0; i<dPts.length-1; i++) {
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', dPts[i].x); line.setAttribute('y1', dPts[i].y);
+          line.setAttribute('x2', dPts[i+1].x); line.setAttribute('y2', dPts[i+1].y);
+          line.setAttribute('class', 'dp-line');
+          oSvg.appendChild(line);
+        }
+      }
+      // Preview polygon fill
+      if (dPts.length >= 3) {
         const pr = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        pr.setAttribute('points', dPts.map(p => p.x + ',' + p.y).join(' '));
+        pr.setAttribute('points', dPts.map(p => p.x+','+p.y).join(' '));
         pr.setAttribute('class', 'dp-preview');
         oSvg.appendChild(pr);
       }
-      // Close hint circle on first point
+      // Close hint on first point
       if (dPts.length >= 3) {
         const ch = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         ch.setAttribute('cx', dPts[0].x); ch.setAttribute('cy', dPts[0].y);
-        ch.setAttribute('r', '1.2'); ch.setAttribute('class', 'close-hint');
+        ch.setAttribute('r', '1.5'); ch.setAttribute('class', 'close-hint');
         oSvg.appendChild(ch);
       }
-      // Drawing points
+      // Points (draggable)
       dPts.forEach((p, i) => {
         const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         circle.setAttribute('cx', p.x); circle.setAttribute('cy', p.y);
-        circle.setAttribute('r', '0.6');
+        circle.setAttribute('r', '0.8');
         circle.setAttribute('class', 'dp-point');
         circle.dataset.dpIdx = i;
         oSvg.appendChild(circle);
@@ -724,26 +822,28 @@ function renderSvg() {
   }
 }
 
-function addLabel(pts, n) {
+function addLabel(pts, label) {
   const cx = pts.reduce((s,p) => s+p.x, 0) / pts.length;
   const cy = pts.reduce((s,p) => s+p.y, 0) / pts.length;
   const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   t.setAttribute('x', cx); t.setAttribute('y', cy);
   t.setAttribute('text-anchor', 'middle'); t.setAttribute('dominant-baseline', 'middle');
-  t.setAttribute('class', 'z-lbl'); t.textContent = n;
+  t.setAttribute('class', 'z-lbl'); t.textContent = label;
   oSvg.appendChild(t);
 }
 
-// SVG click → add draw point or close polygon
+// SVG click → add draw point or close
 oSvg.addEventListener('click', e => {
   if (!drawing) return;
+  // Don't add point if we were dragging
+  if (svgV) return;
   const coords = svgXY(e);
-  // Close if clicking near first point
   if (dPts.length >= 3) {
     const fp = dPts[0];
     if (Math.hypot(coords.x - fp.x, coords.y - fp.y) < 3) { confirmDraw(); return; }
   }
   dPts.push(coords);
+  updateDrawPointCount();
   renderSvg();
 });
 
@@ -754,19 +854,23 @@ oSvg.addEventListener('dblclick', e => {
 
 // Vertex drag
 let svgV = null;
+let svgVMoved = false;
 oSvg.addEventListener('mousedown', e => {
   const t = e.target;
   if (t.classList.contains('v-handle') && !drawing && activeId) {
     svgV = { type: 'handle', idx: parseInt(t.dataset.ptIdx) };
+    svgVMoved = false;
     e.preventDefault(); e.stopPropagation();
   }
   if (t.classList.contains('dp-point') && drawing) {
     svgV = { type: 'draw', idx: parseInt(t.dataset.dpIdx) };
+    svgVMoved = false;
     e.preventDefault(); e.stopPropagation();
   }
 });
 window.addEventListener('mousemove', e => {
   if (!svgV) return;
+  svgVMoved = true;
   const coords = svgXY(e);
   if (svgV.type === 'handle' && activeId) {
     const u = units.find(u => u.id === activeId);
@@ -775,10 +879,12 @@ window.addEventListener('mousemove', e => {
   if (svgV.type === 'draw') dPts[svgV.idx] = { ...coords };
   renderSvg();
 });
-window.addEventListener('mouseup', () => { svgV = null; });
+window.addEventListener('mouseup', () => {
+  setTimeout(() => { svgV = null; }, 10);
+});
 
 // ═══════════════════════════════════
-// CARD CONFIG
+// CARD CONFIG (Tab 2)
 // ═══════════════════════════════════
 function renderCardList(){
   const el=document.getElementById('cList');
@@ -803,9 +909,9 @@ function openCardForm(id){
   document.getElementById('cA').value=u.area||'';
   document.getElementById('cP').value=u.price||'';
   document.getElementById('cSt').value=u.status||'available';
-  const ctaOn = u.ctaEnabled !== false && (u.cta || u.ctaLink);
+  const ctaOn = u.ctaEnabled === true;
   const toggle = document.getElementById('ctaToggle');
-  toggle.checked = !!ctaOn;
+  toggle.checked = ctaOn;
   document.getElementById('ctaToggleVal').textContent = ctaOn ? 'On' : 'Off';
   document.getElementById('ctaFields').classList.toggle('hidden', !ctaOn);
   document.getElementById('cCt').value=u.cta||'';
@@ -833,7 +939,6 @@ document.getElementById('cSave').addEventListener('click',()=>{
   setTimeout(()=>{b.textContent='Guardar';b.style.background='';b.style.borderColor='';},1400);
 });
 
-// CTA toggle
 document.getElementById('ctaToggle').addEventListener('change', function() {
   const on = this.checked;
   document.getElementById('ctaToggleVal').textContent = on ? 'On' : 'Off';
@@ -858,28 +963,23 @@ function updateExportSummary(){
   const total=units.length;
   const fully=units.filter(u=>Object.keys(u.frames).length===TOTAL).length;
   const partial=units.filter(u=>{const c=Object.keys(u.frames).length;return c>0&&c<TOTAL;}).length;
+  const withCta=units.filter(u=>u.ctaEnabled).length;
   document.getElementById('exportSummary').innerHTML=
     `<strong>${total}</strong> unidades · <strong style="color:var(--green)">${fully}</strong> totalmente mapeadas · <strong style="color:var(--orange)">${partial}</strong> parciais<br>
-    As zonas só aparecem nas frames onde foram mapeadas.`;
+    <strong>${withCta}</strong> com botão CTA ativo<br>
+    Zoom inicial: <strong>1.5×</strong> — a turntable aparece maior`;
 }
 
 // ═══════════════════════════════════
 // SAVE / LOAD PROJECT
 // ═══════════════════════════════════
 document.getElementById('saveProjectBtn').addEventListener('click', () => {
-  // Save units (with all frame data) but NOT the frame images (those are re-loaded each time)
-  const project = {
-    version: 1,
-    savedAt: new Date().toISOString(),
-    units: units
-  };
+  const project = { version: 2, savedAt: new Date().toISOString(), units: units };
   const blob = new Blob([JSON.stringify(project, null, 2)], {type: 'application/json'});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = '360-project.json';
-  a.click();
+  const a = document.createElement('a'); a.href = url; a.download = '360-project.json'; a.click();
   URL.revokeObjectURL(url);
+  showToast('Projeto guardado');
 });
 
 document.getElementById('loadProjectBtn').addEventListener('click', () => {
@@ -887,30 +987,19 @@ document.getElementById('loadProjectBtn').addEventListener('click', () => {
 });
 
 document.getElementById('projectInput').addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
+  const file = e.target.files[0]; if (!file) return;
   const reader = new FileReader();
   reader.onload = ev => {
     try {
       const project = JSON.parse(ev.target.result);
       if (!project.units || !Array.isArray(project.units)) throw new Error('Ficheiro inválido');
       units = project.units;
-      // Restore uid counter
       uid = Math.max(...units.map(u => u.id), 0) + 1;
-      activeId = null;
-      editCardId = null;
-      renderUnitList();
-      renderSvg();
+      activeId = null; editCardId = null;
+      renderUnitList(); renderSvg();
       document.getElementById('fgSection').style.display = 'none';
-      // Show confirmation
-      const btn = document.getElementById('loadProjectBtn');
-      btn.textContent = '✓ ' + units.length + ' unidades';
-      btn.style.color = 'var(--green)';
-      btn.style.borderColor = 'var(--green)';
-      setTimeout(() => { btn.textContent = '📂 Carregar'; btn.style.color = ''; btn.style.borderColor = ''; }, 2000);
-    } catch(err) {
-      alert('Erro ao carregar projeto: ' + err.message);
-    }
+      showToast(units.length + ' unidades carregadas');
+    } catch(err) { alert('Erro ao carregar projeto: ' + err.message); }
     e.target.value = '';
   };
   reader.readAsText(file);
@@ -920,7 +1009,6 @@ document.getElementById('projectInput').addEventListener('change', e => {
 // GENERATE
 // ═══════════════════════════════════
 function doGen(){
-  // Save open card form
   if(editCardId){
     const u=units.find(u=>u.id===editCardId);
     if(u){u.name=document.getElementById('cN').value||u.name;u.type=document.getElementById('cTy').value;u.area=document.getElementById('cA').value;u.price=document.getElementById('cP').value;u.status=document.getElementById('cSt').value;u.ctaEnabled=document.getElementById('ctaToggle').checked;u.cta=document.getElementById('cCt').value;u.ctaLink=document.getElementById('cCl').value;}
@@ -945,6 +1033,13 @@ document.getElementById('genBtn2').addEventListener('click',doGen);
 // BUILD EMBED
 // ═══════════════════════════════════
 function buildEmbed(imgs,units){
+  // Clean units for export — only include CTA if enabled
+  const exportUnits = units.map(u => {
+    const eu = {...u};
+    if (!eu.ctaEnabled) { eu.cta = ''; eu.ctaLink = ''; }
+    return eu;
+  });
+
   return `<!DOCTYPE html>
 <html lang="pt">
 <head>
@@ -1026,7 +1121,7 @@ html,body{width:100%;height:100%;background:var(--bg);font-family:'Jost',sans-se
     <div class="vdiv"></div>
     <div class="zoom-ctrls">
       <button class="cbtn" id="zoomOutBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>
-      <span class="zoom-label" id="zoomLabel">1×</span>
+      <span class="zoom-label" id="zoomLabel">1.5×</span>
       <button class="cbtn" id="zoomInBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>
     </div>
     <div class="vdiv"></div>
@@ -1037,14 +1132,15 @@ html,body{width:100%;height:100%;background:var(--bg);font-family:'Jost',sans-se
 </div>
 <script>
 const IMGS=${JSON.stringify(imgs)};
-const UNITS=${JSON.stringify(units)};
+const UNITS=${JSON.stringify(exportUnits)};
 const TOTAL=IMGS.length;
 let current=0,playing=false,playTimer=null,dir=1,speed=1;
 let dragging=false,dragX=0,dragFrame=0,hintShown=false;
 let idleTimer=null;const IDLE_MS=2*60*1000;
-let zoomLevel=1.5,panX=0,panY=0,isPanning=false;
+let zoomLevel=1,panX=0,panY=0,isPanning=false;
 let panStartX=0,panStartY=0,panOriginX=0,panOriginY=0;
 const ZOOM_MIN=1,ZOOM_MAX=4,ZOOM_STEP=0.25;
+const DEFAULT_ZOOM=1.5;
 const display=document.getElementById('display');
 const hotzones=document.getElementById('hotzones');
 const imgWrap=document.getElementById('imgWrap');
@@ -1082,6 +1178,7 @@ function closeCard(){hoverCard.classList.remove('visible');}
 function openCard(u,e){
   const sl={available:'Disponível',sold:'Vendido',reserved:'Reservado'};
   const dis=u.status==='sold';
+  const showCta = u.ctaEnabled && (u.cta || u.ctaLink);
   hoverCard.innerHTML=\`
     \${u.img?\`<img class="card-img show" src="\${u.img}" alt="">\`:''}
     <button class="card-close-btn" id="cardCloseBtn" aria-label="Fechar">
@@ -1099,9 +1196,8 @@ function openCard(u,e){
         \${u.area?\`<div class="card-field"><div class="card-field-label">Área</div><div class="card-field-value">\${u.area} m²</div></div>\`:''}
         \${u.price?\`<div class="card-field"><div class="card-field-label">Preço</div><div class="card-field-value">\${u.price}</div></div>\`:''}
       </div>
-      \${u.cta||u.ctaLink?\`<a class="card-cta\${dis?' disabled':''}" href="\${dis?'#':(u.ctaLink||'#')}" target="\${dis?'_self':'_blank'}">\${dis?'Vendido':(u.cta||'Saber mais')}</a>\`:''}
+      \${showCta?\`<a class="card-cta\${dis?' disabled':''}" href="\${dis?'#':(u.ctaLink||'#')}" target="\${dis?'_self':'_blank'}">\${dis?'Vendido':(u.cta||'Saber mais')}</a>\`:''}
     </div>\`;
-  // Position near click point
   const ar=imgarea.getBoundingClientRect(),cw=Math.min(280,ar.width*.85);
   hoverCard.style.width=cw+'px';
   let lx=e.clientX-ar.left+18,ly=e.clientY-ar.top-30;
@@ -1109,11 +1205,9 @@ function openCard(u,e){
   if(ly<0)ly=4;if(ly+300>ar.height)ly=ar.height-310;
   hoverCard.style.left=Math.max(0,lx)+'px';hoverCard.style.top=Math.max(0,ly)+'px';
   hoverCard.classList.add('visible');
-  // X button
   document.getElementById('cardCloseBtn').addEventListener('click',e=>{e.stopPropagation();closeCard();});
 }
 
-// Close on click outside
 imgarea.addEventListener('click',e=>{
   if(!hoverCard.contains(e.target))closeCard();
 });
@@ -1126,14 +1220,14 @@ function goTo(n){
 function hideHint(){if(!hintShown){hintShown=true;hint.classList.add('gone');}}
 function onUserInteract(){hideHint();if(playing)stopPlay();clearTimeout(idleTimer);idleTimer=setTimeout(startPlay,IDLE_MS);}
 display.addEventListener('mousedown',e=>{if(zoomLevel>1){isPanning=true;panStartX=e.clientX;panStartY=e.clientY;panOriginX=panX;panOriginY=panY;e.preventDefault();return;}dragging=true;dragX=e.clientX;dragFrame=current;onUserInteract();e.preventDefault();});
-window.addEventListener('mousemove',e=>{if(isPanning&&zoomLevel>1){panX=panOriginX+(e.clientX-panStartX);panY=panOriginY+(e.clientY-panStartY);clampPan();applyTransform(true);return;}if(!dragging)return;const sens=(display.offsetWidth||window.innerWidth)/TOTAL*.75;goTo(dragFrame-Math.round((e.clientX-dragX)/sens)*dir);});
+window.addEventListener('mousemove',e=>{if(isPanning&&zoomLevel>1){panX=panOriginX+(e.clientX-panStartX);panY=panOriginY+(e.clientY-panStartY);clampPan();applyTransform();return;}if(!dragging)return;const sens=(display.offsetWidth||window.innerWidth)/TOTAL*.75;goTo(dragFrame-Math.round((e.clientX-dragX)/sens)*dir);});
 window.addEventListener('mouseup',()=>{dragging=false;isPanning=false;});
 display.addEventListener('touchstart',e=>{if(e.touches.length!==1||zoomLevel>1)return;dragging=true;dragX=e.touches[0].clientX;dragFrame=current;onUserInteract();},{passive:true});
 window.addEventListener('touchmove',e=>{if(!dragging||zoomLevel>1)return;const sens=(display.offsetWidth||window.innerWidth)/TOTAL*.75;goTo(dragFrame-Math.round((e.touches[0].clientX-dragX)/sens)*dir);},{passive:true});
 window.addEventListener('touchend',()=>{dragging=false;});
 function applyTransform(){display.style.transform=\`scale(\${zoomLevel}) translate(\${panX/zoomLevel}px,\${panY/zoomLevel}px)\`;sizeOverlay();}
-function clampPan(){if(zoomLevel<=1){panX=0;panY=0;return;}const r=display.getBoundingClientRect();const mx=(r.width*(zoomLevel-1))/2,my=(r.height*(zoomLevel-1))/2;panX=Math.max(-mx,Math.min(mx,panX));panY=Math.max(-my,Math.min(my,panY));}
-function applyZoom(z,cx,cy){const prev=zoomLevel;zoomLevel=Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,z));if(zoomLevel===1){panX=0;panY=0;}else if(cx!==undefined){const r=display.getBoundingClientRect();const ox=cx-(r.left+r.width/2),oy=cy-(r.top+r.height/2);panX=(panX-ox)*(zoomLevel/prev)+ox;panY=(panY-oy)*(zoomLevel/prev)+oy;}clampPan();applyTransform();zoomLabel.textContent=zoomLevel%1===0?zoomLevel+'×':zoomLevel.toFixed(1)+'×';}
+function clampPan(){if(zoomLevel<=1){panX=0;panY=0;return;}const r=imgarea.getBoundingClientRect();const iw=display.naturalWidth,ih=display.naturalHeight;const scale=Math.min(r.width/iw,r.height/ih)*zoomLevel;const visW=iw*scale,visH=ih*scale;const mx=Math.max(0,(visW-r.width)/2);const my=Math.max(0,(visH-r.height)/2);panX=Math.max(-mx,Math.min(mx,panX));panY=Math.max(-my,Math.min(my,panY));}
+function applyZoom(z,cx,cy){const prev=zoomLevel;zoomLevel=Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,z));if(zoomLevel<=1){zoomLevel=1;panX=0;panY=0;}else if(cx!==undefined){const r=display.getBoundingClientRect();const ox=cx-(r.left+r.width/2),oy=cy-(r.top+r.height/2);panX=(panX-ox)*(zoomLevel/prev)+ox;panY=(panY-oy)*(zoomLevel/prev)+oy;}clampPan();applyTransform();zoomLabel.textContent=zoomLevel%1===0?zoomLevel+'×':zoomLevel.toFixed(1)+'×';}
 document.getElementById('zoomInBtn').addEventListener('click',()=>{onUserInteract();applyZoom(zoomLevel+ZOOM_STEP);});
 document.getElementById('zoomOutBtn').addEventListener('click',()=>{onUserInteract();applyZoom(zoomLevel-ZOOM_STEP);});
 display.addEventListener('wheel',e=>{
@@ -1155,8 +1249,13 @@ document.getElementById('prevBtn').addEventListener('click',()=>{onUserInteract(
 document.getElementById('nextBtn').addEventListener('click',()=>{onUserInteract();goTo(current+1);});
 document.getElementById('fsBtn').addEventListener('click',()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.();});
 window.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){onUserInteract();goTo(current-dir);}if(e.key==='ArrowRight'){onUserInteract();goTo(current+dir);}if(e.key==='+'||e.key==='='){onUserInteract();applyZoom(zoomLevel+ZOOM_STEP);}if(e.key==='-'){onUserInteract();applyZoom(zoomLevel-ZOOM_STEP);}if(e.key===' '){e.preventDefault();if(playing){stopPlay();clearTimeout(idleTimer);}else startPlay();}});
+
+// Load first image and apply default zoom
 display.src=IMGS[0];
-display.addEventListener('load',function initZoom(){applyZoom(1.5);display.removeEventListener('load',initZoom);},{once:true});
+display.addEventListener('load',function initZoom(){
+  applyZoom(DEFAULT_ZOOM);
+  display.removeEventListener('load',initZoom);
+},{once:true});
 startPlay();
 <\/script>
 </body>
