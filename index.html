@@ -249,6 +249,11 @@ html,body{width:100%;height:100vh;background:var(--bg);font-family:'Jost',sans-s
           </div>
         </div>
 
+        <!-- Draw / Edit button for current frame -->
+        <div class="copy-zone-row" id="drawCurrentRow" style="display:none">
+          <button class="tb-btn accent" id="drawCurrentBtn" style="flex:1;padding:7px">✏ Desenhar nesta frame</button>
+          <button class="tb-btn" id="deleteZoneBtn" style="padding:7px;color:var(--red)" title="Apagar zona desta frame">🗑</button>
+        </div>
         <!-- Copy zone tools -->
         <div class="copy-zone-row" id="copyZoneRow" style="display:none">
           <button class="tb-btn" id="copyToPrevBtn" title="Copiar zona para a frame anterior">← Copiar p/ anterior</button>
@@ -543,6 +548,13 @@ function renderFGrid(){
     btn.title='Frame '+(i+1)+(hasPts?' ✓':'');
     btn.addEventListener('click',()=>{
       gotoFrame(i);
+      // Allow manual draw on any frame
+      if(activeId && !drawing) {
+        const uu = units.find(u=>u.id===activeId);
+        if(!uu.frames[i]) {
+          startDraw();
+        }
+      }
     });
     grid.appendChild(btn);
   }
@@ -554,9 +566,32 @@ function renderFGrid(){
 function updateCopyButtons() {
   const u = units.find(u=>u.id===activeId);
   const hasCurrent = u && u.frames[curFrame];
-  document.getElementById('copyZoneRow').style.display = hasCurrent && !drawing ? 'flex' : 'none';
-  document.getElementById('copyAllRow').style.display = hasCurrent && !drawing ? 'flex' : 'none';
+  const show = hasCurrent && !drawing;
+  document.getElementById('copyZoneRow').style.display = show ? 'flex' : 'none';
+  document.getElementById('copyAllRow').style.display = show ? 'flex' : 'none';
+  // Show draw/edit button when not in draw mode and unit is selected
+  document.getElementById('drawCurrentRow').style.display = (!drawing && activeId) ? 'flex' : 'none';
+  const drawBtn = document.getElementById('drawCurrentBtn');
+  if (hasCurrent) {
+    drawBtn.textContent = '✏ Re-desenhar esta frame';
+  } else {
+    drawBtn.textContent = '✏ Desenhar nesta frame';
+  }
+  document.getElementById('deleteZoneBtn').style.display = hasCurrent ? '' : 'none';
 }
+
+document.getElementById('drawCurrentBtn').addEventListener('click', () => {
+  if (activeId && !drawing) startDraw();
+});
+
+document.getElementById('deleteZoneBtn').addEventListener('click', () => {
+  const u = units.find(u=>u.id===activeId);
+  if (u && u.frames[curFrame]) {
+    delete u.frames[curFrame];
+    renderFGrid(); renderSvg(); updateFrameStatus(); updateCopyButtons();
+    showToast('Zona removida da frame ' + (curFrame+1));
+  }
+});
 
 document.getElementById('copyToPrevBtn').addEventListener('click', () => {
   const u = units.find(u=>u.id===activeId);
@@ -1057,8 +1092,8 @@ html,body{width:100%;height:100%;background:var(--bg);font-family:'Jost',sans-se
 #display{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;user-select:none;-webkit-user-drag:none;cursor:grab;transform-origin:center center;transition:transform .35s cubic-bezier(0.25,0.46,0.45,0.94)}
 #display:active{cursor:grabbing}
 #hotzones{position:absolute;top:0;left:0;pointer-events:none;overflow:visible}
-.hz-poly{fill:transparent;stroke:none;cursor:pointer;pointer-events:all;transition:fill .2s ease}
-.hz-poly:hover{fill:rgba(255,255,255,.28)}
+.hz-poly{fill:transparent;stroke:none;cursor:pointer;pointer-events:all}
+.hz-poly:hover{fill:transparent}
 .hz-poly.sold:hover{fill:rgba(192,80,80,.18)}
 .hz-poly.reserved:hover{fill:rgba(200,150,62,.18)}
 .hz-card{position:absolute;z-index:50;width:clamp(220px,28vw,280px);background:var(--white);border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.10);display:none;flex-direction:column;pointer-events:all;animation:cardIn .15s ease}
