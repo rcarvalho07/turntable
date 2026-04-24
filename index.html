@@ -1,1081 +1,2147 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>360° Builder — Per-Frame Zones</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Jost:wght@300;400;500;600&display=swap');
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#f7f5f2;--white:#fff;--text:#1a1a1a;--muted:#9a9690;--accent:#c8a96e;--dark:#a8894e;--border:#e2ddd8;--red:#c05050;--orange:#c8963e;--green:#4a9a6a;--blue:#5a8ab4}
-html,body{width:100%;height:100vh;background:var(--bg);font-family:'Jost',sans-serif;color:var(--text);overflow:hidden}
-#app{width:100vw;height:100vh;display:grid;grid-template-rows:48px 1fr 52px;grid-template-columns:1fr 300px}
-
-/* TOPBAR */
-.topbar{grid-column:1/-1;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:10px;z-index:10}
-.tb-logo{font-family:'Cormorant Garamond',serif;font-size:13px;letter-spacing:.2em;text-transform:uppercase;flex-shrink:0}
-.tb-div{width:1px;height:18px;background:var(--border)}
-.tab-group{display:flex}
-.tab{font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:5px 12px;border:1px solid var(--border);border-right:none;background:var(--white);color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap}
-.tab:last-child{border-right:1px solid var(--border)}
-.tab.on{background:var(--text);border-color:var(--text);color:var(--white)}
-.tab:hover:not(.on){color:var(--accent);border-color:var(--accent)}
-.tb-spacer{flex:1}
-.tb-btn{font-family:'Jost',sans-serif;font-size:9px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--border);background:var(--white);color:var(--muted);padding:5px 12px;cursor:pointer;transition:all .15s;white-space:nowrap}
-.tb-btn:hover{color:var(--accent);border-color:var(--accent)}
-.tb-btn.accent{background:var(--accent);border-color:var(--accent);color:var(--white)}
-.tb-btn.accent:hover{background:var(--dark);border-color:var(--dark)}
-.spin{width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:_spin .8s linear infinite;flex-shrink:0}
-@keyframes _spin{to{transform:rotate(360deg)}}
-
-/* CANVAS */
-.canvas-col{position:relative;background:#ddd;overflow:hidden;display:flex;align-items:center;justify-content:center}
-#imgWrap{transition:transform .1s ease}
-.canvas-col img{display:block;max-width:100%;max-height:100%;cursor:crosshair}
-
-/* Drawing cursor */
-.canvas-col.draw-mode{cursor:crosshair}
-.canvas-col.draw-mode img{cursor:crosshair}
-
-/* PANEL */
-.panel{background:var(--white);border-left:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column}
-.ps{border-bottom:1px solid var(--border);padding:10px 12px;display:flex;flex-direction:column;gap:7px;flex-shrink:0}
-.ps.scroll{overflow-y:auto;flex:1;border-bottom:none}
-.ps-hd{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500;display:flex;align-items:center;justify-content:space-between}
-
-/* Unit list */
-.ul{display:flex;flex-direction:column;gap:2px}
-.ui{display:flex;align-items:center;gap:7px;padding:6px 8px;border:1px solid var(--border);cursor:pointer;transition:border-color .15s;background:var(--bg)}
-.ui:hover{border-color:var(--accent)}.ui.on{border-color:var(--text);background:var(--white)}
-.ui-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.ui-dot.available{background:var(--green)}.ui-dot.sold{background:var(--red)}.ui-dot.reserved{background:var(--orange)}
-.ui-name{font-size:11px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.ui-mapped{font-size:9px;color:var(--muted);flex-shrink:0}
-.ui-del{background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;flex-shrink:0;display:flex;transition:color .15s}
-.ui-del:hover{color:var(--red)}
-.ui-del svg{width:11px;height:11px}
-
-/* Frame progress bar */
-.fp-wrap{display:flex;flex-direction:column;gap:4px}
-.fp-label{font-size:9px;color:var(--muted);letter-spacing:.08em;display:flex;justify-content:space-between}
-.fp-bar{height:4px;background:var(--border);border-radius:2px;position:relative;overflow:hidden}
-.fp-fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent);border-radius:2px;transition:width .2s}
-
-/* Frame grid */
-.fg{display:grid;grid-template-columns:repeat(17,1fr);gap:2px}
-.fb{height:16px;border:1px solid var(--border);background:var(--white);cursor:pointer;transition:all .1s;border-radius:1px;font-size:0}
-.fb:hover{border-color:var(--accent)}
-.fb.mapped{background:var(--accent);border-color:var(--accent)}
-.fb.cur{box-shadow:0 0 0 2px var(--text);z-index:1}
-.fb.mapped.cur{box-shadow:0 0 0 2px var(--text)}
-
-/* Mode indicator */
-.mode-pill{font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:2px;font-weight:500}
-.mode-pill.navigate{background:#eee;color:var(--muted)}
-.mode-pill.draw{background:var(--accent);color:var(--white)}
-.mode-pill.edit{background:var(--blue);color:var(--white)}
-
-/* Draw instructions */
-.draw-hint{font-size:10px;color:var(--muted);line-height:1.7;padding:8px;background:var(--bg);border:1px solid var(--border);border-left:2px solid var(--accent)}
-.draw-step{display:flex;align-items:flex-start;gap:6px;margin:3px 0}
-.draw-step-num{background:var(--accent);color:var(--white);width:16px;height:16px;border-radius:50%;font-size:8px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
-.draw-step-text{font-size:10px;color:var(--text);line-height:1.5}
-.draw-point-count{font-size:11px;font-weight:600;color:var(--accent);text-align:center;padding:4px 0}
-
-/* Form fields */
-.fg2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.fr{display:flex;flex-direction:column;gap:2px}
-.fr label{font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-.fr input,.fr select{font-family:'Jost',sans-serif;font-size:11px;color:var(--text);border:1px solid var(--border);background:var(--bg);padding:5px 7px;outline:none;width:100%;transition:border-color .15s}
-.fr input:focus,.fr select:focus{border-color:var(--accent)}
-.img-up{width:100%;padding:6px;border:1px dashed var(--border);background:var(--bg);color:var(--muted);font-size:9px;cursor:pointer;text-align:center;transition:border-color .2s;font-family:'Jost',sans-serif}
-/* CTA Toggle */
-.cta-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:2px}
-.cta-toggle-label{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500}
-.toggle-wrap{display:flex;align-items:center;gap:7px}
-.toggle{position:relative;width:32px;height:18px;flex-shrink:0}
-.toggle input{opacity:0;width:0;height:0;position:absolute}
-.toggle-track{position:absolute;inset:0;background:var(--border);border-radius:9px;cursor:pointer;transition:background .2s}
-.toggle input:checked+.toggle-track{background:var(--accent)}
-.toggle-thumb{position:absolute;top:3px;left:3px;width:12px;height:12px;background:var(--white);border-radius:50%;transition:transform .2s;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.2)}
-.toggle input:checked~.toggle-thumb{transform:translateX(14px)}
-.toggle-val{font-size:9px;color:var(--muted);letter-spacing:.06em;min-width:20px}
-.cta-fields{display:flex;flex-direction:column;gap:7px}
-.cta-fields.hidden{display:none}
-.img-up:hover{border-color:var(--accent);color:var(--accent)}
-.img-th{width:100%;height:50px;object-fit:cover;display:none;border:1px solid var(--border);margin-bottom:3px}
-.img-th.on{display:block}
-
-/* Copy zone button */
-.copy-zone-row{display:flex;gap:5px;margin-top:4px}
-.copy-zone-row .tb-btn{flex:1;padding:6px;font-size:8px;text-align:center}
-
-/* BOTTOM / TIMELINE */
-.timeline{grid-column:1/-1;background:var(--text);display:flex;align-items:center;padding:0 14px;gap:14px}
-.tl-info{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4);display:flex;align-items:center;gap:5px}
-.tl-info strong{color:var(--accent)}
-.tl-hint{font-size:9px;color:rgba(255,255,255,.25);margin-left:auto}
-
-/* SVG drawing */
-.z-fill{fill:rgba(200,169,110,.1);stroke:rgba(200,169,110,.55);stroke-width:0.6px;vector-effect:non-scaling-stroke;cursor:pointer;transition:fill .15s}
-.z-fill:hover{fill:rgba(200,169,110,.22)}
-.z-fill.active{fill:rgba(200,169,110,.28);stroke:var(--accent);stroke-width:1.5px;vector-effect:non-scaling-stroke}
-.z-lbl{pointer-events:none;font-family:'Jost',sans-serif;font-weight:600;font-size:2px;fill:rgba(200,169,110,.9)}
-.v-handle{fill:var(--accent);stroke:var(--white);stroke-width:1px;vector-effect:non-scaling-stroke;cursor:move}
-.v-handle:hover{fill:var(--dark)}
-.dp-preview{fill:rgba(200,169,110,.12);stroke:rgba(200,169,110,.7);stroke-width:1.2px;vector-effect:non-scaling-stroke;stroke-dasharray:4 2;pointer-events:none}
-.dp-point{fill:var(--accent);stroke:var(--white);stroke-width:1.5px;vector-effect:non-scaling-stroke;cursor:move}
-.dp-line{stroke:rgba(200,169,110,.5);stroke-width:0.8px;vector-effect:non-scaling-stroke;stroke-dasharray:3 2;pointer-events:none}
-.close-hint{fill:rgba(200,169,110,.3);stroke:var(--accent);stroke-width:1.5px;vector-effect:non-scaling-stroke;pointer-events:none;stroke-dasharray:2 2}
-
-/* Upload overlay */
-#uploadOv{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center}
-#uploadOv.gone{display:none}
-.up-inner{display:flex;flex-direction:column;align-items:center;gap:20px;width:min(440px,90vw)}
-.up-title{font-family:'Cormorant Garamond',serif;font-size:clamp(22px,5vw,34px);font-weight:300;text-align:center;line-height:1.2}
-.up-title em{font-style:italic;color:var(--accent)}
-.dropbox{width:100%;border:1px dashed var(--border);padding:32px 20px;text-align:center;background:var(--white);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:12px;transition:all .2s}
-.dropbox:hover,.dropbox.over{border-color:var(--accent);background:#fdfaf6;border-style:solid}
-.drop-ico{width:40px;height:40px;border:1px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--accent)}
-.drop-lbl{font-size:12px;color:var(--text)}
-.drop-sub{font-size:10px;color:var(--muted)}
-.pb-wrap{width:100%;display:flex;flex-direction:column;gap:6px}
-.pb{height:1px;background:var(--border);position:relative}
-.pb-f{position:absolute;left:0;top:0;bottom:0;background:var(--accent);transition:width .1s}
-.pb-txt{font-size:12px;font-weight:500;color:var(--text)}
-.pb-eta{font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
-#fInput,#iInput{display:none}
-
-/* Toast notification */
-.toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--white);padding:8px 16px;font-size:11px;border-radius:4px;opacity:0;transition:all .3s;z-index:100;pointer-events:none;white-space:nowrap}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-</style>
-</head>
-<body>
-
-<div class="toast" id="toast"></div>
-
-<!-- UPLOAD -->
-<div id="uploadOv">
-  <div class="up-inner">
-    <div style="font-family:'Cormorant Garamond',serif;font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)">360° Builder</div>
-    <div class="up-title">Carrega as <em>34 frames</em></div>
-    <div class="dropbox" id="dropbox">
-      <div class="drop-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></div>
-      <div class="drop-lbl">Arrasta as frames aqui</div>
-      <div class="drop-sub">Turntable camera.0000 → .0033</div>
-      <button style="font-family:'Jost',sans-serif;font-size:10px;font-weight:500;letter-spacing:.15em;text-transform:uppercase;background:var(--text);color:var(--white);border:none;padding:10px 24px;cursor:pointer" id="selBtn">Selecionar</button>
-      <input type="file" id="fInput" multiple accept="image/*">
-    </div>
-    <div class="pb-wrap" id="pbWrap" style="display:none">
-      <div class="pb"><div class="pb-f" id="pbF"></div></div>
-      <div style="display:flex;justify-content:space-between"><span class="pb-txt" id="pbTxt">0 / 0</span><span class="pb-eta" id="pbEta"></span></div>
-    </div>
-  </div>
-</div>
-
-<!-- APP -->
-<div id="app">
-
-  <!-- TOPBAR -->
-  <div class="topbar">
-    <div class="tb-logo">360° Builder</div>
-    <div class="tb-div"></div>
-    <div class="tab-group">
-      <button class="tab on" id="t1" onclick="goTab(1)">1 · Mapear</button>
-      <button class="tab" id="t2" onclick="goTab(2)">2 · Cards</button>
-      <button class="tab" id="t3" onclick="goTab(3)">3 · Exportar</button>
-    </div>
-    <div class="tb-spacer"></div>
-    <span id="ucnt" style="font-size:9px;color:var(--muted)">0 unidades</span>
-    <button class="tb-btn" id="addBtn">+ Unidade</button>
-    <div class="tb-div"></div>
-    <button class="tb-btn" id="saveProjectBtn" title="Guardar projeto como JSON">💾 Guardar</button>
-    <button class="tb-btn" id="loadProjectBtn" title="Carregar projeto JSON">📂 Carregar</button>
-    <input type="file" id="projectInput" accept=".json" style="display:none">
-    <div class="tb-div"></div>
-    <button class="tb-btn accent" id="genBtn">⬇ Gerar HTML</button>
-    <div id="genSpin" style="display:none;align-items:center;gap:5px"><div class="spin"></div><span style="font-size:9px;color:var(--muted)">A gerar...</span></div>
-  </div>
-
-  <!-- CANVAS -->
-  <div class="canvas-col" id="canvasCol">
-    <div id="imgWrap" style="position:relative;display:inline-block;line-height:0;transform-origin:center center">
-      <img id="cImg" src="" alt="" draggable="false" style="display:block;max-width:100%;max-height:100%;user-select:none;-webkit-user-drag:none">
-      <svg id="oSvg" viewBox="0 0 100 100" preserveAspectRatio="none"
-           style="position:absolute;inset:0;width:100%;height:100%;overflow:visible"></svg>
-    </div>
-  </div>
-
-  <!-- PANEL -->
-  <div class="panel" id="panel">
-
-    <!-- TAB 1: MAP -->
-    <div id="p1">
-      <!-- Unit list -->
-      <div class="ps" style="max-height:200px;overflow-y:auto">
-        <div class="ps-hd">
-          Unidades
-          <span class="mode-pill navigate" id="modePill">Navegar</span>
-        </div>
-        <div class="ul" id="uList">
-          <div style="font-size:10px;color:var(--muted);text-align:center;padding:12px 0">Sem unidades.<br>Clica em + Unidade.</div>
-        </div>
-      </div>
-
-      <!-- Frame grid for selected unit -->
-      <div class="ps" id="fgSection" style="display:none">
-        <div class="ps-hd">
-          Frames — <span id="fgUnitName" style="color:var(--accent)">—</span>
-          <span id="fgProgress" style="font-size:9px;color:var(--muted)">0/34</span>
-        </div>
-        <div class="fp-wrap">
-          <div class="fp-bar"><div class="fp-fill" id="fpFill"></div></div>
-          <div class="fp-label"><span id="fpLbl">0 de 34 frames mapeadas</span><span id="fpPct">0%</span></div>
-        </div>
-        <div class="fg" id="fGrid"></div>
-
-        <!-- Draw section -->
-        <div id="drawSection" style="display:none">
-          <div class="draw-hint" id="drawHint">
-            <div class="draw-step"><div class="draw-step-num">1</div><div class="draw-step-text">Clica no canvas para marcar os cantos da zona</div></div>
-            <div class="draw-step"><div class="draw-step-num">2</div><div class="draw-step-text">Mínimo 3 pontos — arrasta para ajustar</div></div>
-            <div class="draw-step"><div class="draw-step-num">3</div><div class="draw-step-text"><strong>Duplo-clique</strong>, <strong>Enter</strong> ou clica no 1º ponto para fechar</div></div>
-            <div class="draw-point-count" id="drawPtCount"></div>
-          </div>
-          <div style="display:flex;gap:5px;margin-top:6px" id="drawBtns">
-            <button class="tb-btn" id="cancelDraw" style="flex:1;padding:7px">✕ Cancelar</button>
-            <button class="tb-btn accent" id="confirmDraw" style="flex:1;padding:7px" disabled>✓ Confirmar</button>
-          </div>
-        </div>
-
-        <!-- Draw / Edit button for current frame -->
-        <div class="copy-zone-row" id="drawCurrentRow" style="display:none">
-          <button class="tb-btn accent" id="drawCurrentBtn" style="flex:1;padding:7px">✏ Desenhar nesta frame</button>
-          <button class="tb-btn" id="deleteZoneBtn" style="padding:7px;color:var(--red)" title="Apagar zona desta frame">🗑</button>
-        </div>
-        <!-- Copy zone tools -->
-        <div class="copy-zone-row" id="copyZoneRow" style="display:none">
-          <button class="tb-btn" id="copyToPrevBtn" title="Copiar zona para a frame anterior">← Copiar p/ anterior</button>
-          <button class="tb-btn" id="copyToNextBtn" title="Copiar zona para a próxima frame">Copiar p/ seguinte →</button>
-        </div>
-        <div class="copy-zone-row" id="copyAllRow" style="display:none">
-          <button class="tb-btn" id="copyToAllBtn" title="Copiar esta zona para todas as frames vazias" style="flex:1">Copiar para todas as frames vazias</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB 2: CARDS -->
-    <div id="p2" style="display:none;flex-direction:column;overflow:hidden;flex:1">
-      <div class="ps">
-        <div class="ps-hd">Seleciona unidade</div>
-        <div class="ul" id="cList"></div>
-      </div>
-      <div class="ps scroll" id="cForm" style="display:none">
-        <div class="ps-hd" id="cFormTitle">Dados do card</div>
-        <div class="fg2">
-          <div class="fr"><label>Nome / Nº</label><input type="text" id="cN" placeholder="Lote 1"></div>
-          <div class="fr"><label>Tipologia</label><input type="text" id="cTy" placeholder="T3"></div>
-        </div>
-        <div class="fg2">
-          <div class="fr"><label>Área (m²)</label><input type="text" id="cA" placeholder="142"></div>
-          <div class="fr"><label>Preço</label><input type="text" id="cP" placeholder="285.000€"></div>
-        </div>
-        <div class="fr"><label>Estado</label>
-          <select id="cSt">
-            <option value="available">Disponível</option>
-            <option value="reserved">Reservado</option>
-            <option value="sold">Vendido</option>
-          </select>
-        </div>
-        <div class="fr"><label>Imagem interior</label>
-          <img class="img-th" id="cIm" src="" alt="">
-          <div class="img-up" id="cImBtn">+ Adicionar imagem</div>
-          <input type="file" id="iInput" accept="image/*">
-        </div>
-        <div class="cta-toggle-row">
-          <span class="cta-toggle-label">Botão CTA</span>
-          <div class="toggle-wrap">
-            <span class="toggle-val" id="ctaToggleVal">Off</span>
-            <label class="toggle">
-              <input type="checkbox" id="ctaToggle">
-              <div class="toggle-track"></div>
-              <div class="toggle-thumb"></div>
-            </label>
-          </div>
-        </div>
-        <div class="cta-fields hidden" id="ctaFields">
-          <div class="fr"><label>Texto CTA</label><input type="text" id="cCt" placeholder="Saber mais"></div>
-          <div class="fr"><label>Link CTA</label><input type="text" id="cCl" placeholder="mailto:..."></div>
-        </div>
-        <button class="tb-btn accent" style="padding:9px;margin-top:2px" id="cSave">Guardar</button>
-      </div>
-    </div>
-
-    <!-- TAB 3: EXPORT -->
-    <div id="p3" style="display:none;padding:14px;flex-direction:column;gap:10px">
-      <div style="font-size:10px;color:var(--muted);line-height:1.7">
-        Gera um <strong>index.html</strong> com todas as imagens e zonas incorporadas.<br>
-        Cada zona tem coordenadas <strong>exatas por frame</strong>.
-      </div>
-      <div style="font-size:10px;color:var(--muted);line-height:1.6;padding:8px 10px;border-left:2px solid var(--accent);background:var(--bg)" id="exportSummary"></div>
-      <button class="tb-btn accent" style="padding:11px" id="genBtn2">⬇ Gerar index.html</button>
-    </div>
-
-  </div>
-
-  <!-- TIMELINE -->
-  <div class="timeline">
-    <div class="tl-info">Frame <strong id="tlFrame">1</strong> / <strong id="tlTotal">34</strong></div>
-    <div class="tl-info">Unidade <strong id="tlUnit">—</strong></div>
-    <div class="tl-info" id="tlMapped" style="display:none">Esta frame <strong style="color:var(--green)">✓ mapeada</strong></div>
-    <div class="tl-hint" id="tlHint">← → navegar · arrasta imagem para rodar · D = desenhar</div>
-  </div>
-
-</div>
-
-<script>
-// ═══════════════════════════════════
-// STATE
-// ═══════════════════════════════════
-const TOTAL = 34;
-let frames = [];
-let units = [];
-let activeId = null;
-let editCardId = null;
-let curFrame = 0;
-let tab = 1;
-let drawing = false;
-let dPts = [];
-let vDrag = null;
-let uid = 1;
-
-// ═══════════════════════════════════
-// TOAST
-// ═══════════════════════════════════
-function showToast(msg, duration=2000) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('show'), duration);
-}
-
-// ═══════════════════════════════════
-// UPLOAD
-// ═══════════════════════════════════
-const dropbox = document.getElementById('dropbox');
-const fInput = document.getElementById('fInput');
-document.getElementById('selBtn').addEventListener('click', e=>{e.stopPropagation();fInput.click();});
-fInput.addEventListener('change', e=>{if(e.target.files.length)loadFiles(e.target.files);});
-dropbox.addEventListener('dragover', e=>{e.preventDefault();dropbox.classList.add('over');});
-dropbox.addEventListener('dragleave', ()=>dropbox.classList.remove('over'));
-dropbox.addEventListener('drop', e=>{e.preventDefault();dropbox.classList.remove('over');if(e.dataTransfer.files.length)loadFiles(e.dataTransfer.files);});
-
-function loadFiles(files){
-  const sorted=Array.from(files).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
-  const toLoad=sorted.slice(0,TOTAL);
-  let done=0,t0=null;
-  frames=[];
-  document.getElementById('pbWrap').style.display='flex';
-  document.getElementById('pbWrap').style.flexDirection='column';
-  dropbox.style.display='none';
-  toLoad.forEach((file,i)=>{
-    const r=new FileReader();
-    r.onload=ev=>{
-      frames[i]=ev.target.result; done++;
-      if(!t0&&done===1)t0=Date.now();
-      document.getElementById('pbF').style.width=(done/toLoad.length*100)+'%';
-      document.getElementById('pbTxt').textContent=done+' / '+toLoad.length;
-      if(t0&&done>1&&done<toLoad.length){
-        const eta=Math.ceil((toLoad.length-done)/(done/((Date.now()-t0)/1000)));
-        document.getElementById('pbEta').textContent=eta<2?'A terminar...':eta<60?'~'+eta+'s':'~'+Math.ceil(eta/60)+'min';
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>360° Builder — Per-Frame Zones</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Jost:wght@300;400;500;600&display=swap");
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
       }
-      if(done===toLoad.length){
-        document.getElementById('pbEta').textContent='✓';
-        setTimeout(()=>{document.getElementById('uploadOv').classList.add('gone');gotoFrame(0);},300);
+      :root {
+        --bg: #f7f5f2;
+        --white: #fff;
+        --text: #1a1a1a;
+        --muted: #9a9690;
+        --accent: #c8a96e;
+        --dark: #a8894e;
+        --border: #e2ddd8;
+        --red: #c05050;
+        --orange: #c8963e;
+        --green: #4a9a6a;
+        --blue: #5a8ab4;
       }
-    };
-    r.readAsDataURL(file);
-  });
-}
+      html,
+      body {
+        width: 100%;
+        height: 100vh;
+        background: var(--bg);
+        font-family: "Jost", sans-serif;
+        color: var(--text);
+        overflow: hidden;
+      }
+      #app {
+        width: 100vw;
+        height: 100vh;
+        display: grid;
+        grid-template-rows: 48px 1fr 52px;
+        grid-template-columns: 1fr 300px;
+      }
 
-// ═══════════════════════════════════
-// TABS
-// ═══════════════════════════════════
-function goTab(n){
-  tab=n;
-  [1,2,3].forEach(i=>{
-    document.getElementById('t'+i).classList.toggle('on',i===n);
-    document.getElementById('p'+i).style.display= i===n ? (n===1?'block':'flex') : 'none';
-  });
-  if(n===2)renderCardList();
-  if(n===3)updateExportSummary();
-}
+      /* TOPBAR */
+      .topbar {
+        grid-column: 1/-1;
+        background: var(--white);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        padding: 0 14px;
+        gap: 10px;
+        z-index: 10;
+      }
+      .tb-logo {
+        font-family: "Cormorant Garamond", serif;
+        font-size: 13px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        flex-shrink: 0;
+      }
+      .tb-div {
+        width: 1px;
+        height: 18px;
+        background: var(--border);
+      }
+      .tab-group {
+        display: flex;
+      }
+      .tab {
+        font-size: 9px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 5px 12px;
+        border: 1px solid var(--border);
+        border-right: none;
+        background: var(--white);
+        color: var(--muted);
+        cursor: pointer;
+        transition: all 0.15s;
+        white-space: nowrap;
+      }
+      .tab:last-child {
+        border-right: 1px solid var(--border);
+      }
+      .tab.on {
+        background: var(--text);
+        border-color: var(--text);
+        color: var(--white);
+      }
+      .tab:hover:not(.on) {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+      .tb-spacer {
+        flex: 1;
+      }
+      .tb-btn {
+        font-family: "Jost", sans-serif;
+        font-size: 9px;
+        font-weight: 500;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        border: 1px solid var(--border);
+        background: var(--white);
+        color: var(--muted);
+        padding: 5px 12px;
+        cursor: pointer;
+        transition: all 0.15s;
+        white-space: nowrap;
+      }
+      .tb-btn:hover {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+      .tb-btn.accent {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--white);
+      }
+      .tb-btn.accent:hover {
+        background: var(--dark);
+        border-color: var(--dark);
+      }
+      .spin {
+        width: 13px;
+        height: 13px;
+        border: 2px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: _spin 0.8s linear infinite;
+        flex-shrink: 0;
+      }
+      @keyframes _spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
 
-// ═══════════════════════════════════
-// FRAME NAV
-// ═══════════════════════════════════
-const cImg = document.getElementById('cImg');
-const oSvg = document.getElementById('oSvg');
+      /* CANVAS */
+      .canvas-col {
+        position: relative;
+        background: #ddd;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #imgWrap {
+        transition: transform 0.1s ease;
+      }
+      .canvas-col img {
+        display: block;
+        max-width: 100%;
+        max-height: 100%;
+        cursor: crosshair;
+      }
 
-function gotoFrame(n){
-  curFrame = Math.max(0,Math.min(frames.length-1,n));
-  cImg.src = frames[curFrame];
-  document.getElementById('tlFrame').textContent = curFrame+1;
-  document.getElementById('tlTotal').textContent = frames.length;
-  updateFrameStatus();
-  renderFGrid();
-  renderSvg();
-  updateCopyButtons();
-}
+      /* Drawing cursor */
+      .canvas-col.draw-mode {
+        cursor: crosshair;
+      }
+      .canvas-col.draw-mode img {
+        cursor: crosshair;
+      }
 
-function updateFrameStatus(){
-  const u = units.find(u=>u.id===activeId);
-  const mapped = u && u.frames[curFrame];
-  document.getElementById('tlMapped').style.display = mapped ? 'flex' : 'none';
-}
+      /* PANEL */
+      .panel {
+        background: var(--white);
+        border-left: 1px solid var(--border);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .ps {
+        border-bottom: 1px solid var(--border);
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        flex-shrink: 0;
+      }
+      .ps.scroll {
+        overflow-y: auto;
+        flex: 1;
+        border-bottom: none;
+      }
+      .ps-hd {
+        font-size: 9px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
 
-// Drag to rotate
-let imgDrag=false, imgDragX=0, imgDragF=0;
-cImg.addEventListener('mousedown',e=>{
-  if(drawing||edPanning||e.button!==0||e.altKey)return;
-  if(edZoom>1){
-    edPanning=true;edPanSX=e.clientX;edPanSY=e.clientY;edPanOX=edPanX;edPanOY=edPanY;
-    e.preventDefault();return;
-  }
-  imgDrag=true; imgDragX=e.clientX; imgDragF=curFrame; e.preventDefault();
-});
-window.addEventListener('mousemove',e=>{
-  if(!imgDrag)return;
-  const sens=(cImg.offsetWidth||800)/TOTAL*0.7;
-  const n=imgDragF-Math.round((e.clientX-imgDragX)/sens);
-  const cc=Math.max(0,Math.min(frames.length-1,((n%TOTAL)+TOTAL)%TOTAL));
-  if(cc!==curFrame)gotoFrame(cc);
-});
-window.addEventListener('mouseup',()=>{imgDrag=false;});
+      /* Unit list */
+      .ul {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .ui {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 6px 8px;
+        border: 1px solid var(--border);
+        cursor: pointer;
+        transition: border-color 0.15s;
+        background: var(--bg);
+      }
+      .ui:hover {
+        border-color: var(--accent);
+      }
+      .ui.on {
+        border-color: var(--text);
+        background: var(--white);
+      }
+      .ui-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .ui-dot.available {
+        background: var(--green);
+      }
+      .ui-dot.sold {
+        background: var(--red);
+      }
+      .ui-dot.soon {
+        background: var(--blue);
+      }
+      .ui-dot.starting {
+        background: var(--orange);
+      }
+      .ui-dot.not-started {
+        background: var(--muted);
+      }
+      .ui-name {
+        font-size: 11px;
+        font-weight: 500;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+      }
+      .ui-mapped {
+        font-size: 9px;
+        color: var(--muted);
+        flex-shrink: 0;
+      }
+      .ui-del {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--muted);
+        padding: 2px;
+        flex-shrink: 0;
+        display: flex;
+        transition: color 0.15s;
+      }
+      .ui-del:hover {
+        color: var(--red);
+      }
+      .ui-del svg {
+        width: 11px;
+        height: 11px;
+      }
 
-window.addEventListener('keydown',e=>{
-  if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return;
-  if(e.ctrlKey||e.metaKey)return;
-  if(e.key==='ArrowLeft'&&!drawing)gotoFrame(curFrame-1);
-  if(e.key==='ArrowRight'&&!drawing)gotoFrame(curFrame+1);
-  if(e.key==='d'&&activeId&&!drawing)startDraw();
-  if(e.key==='Enter'&&drawing&&dPts.length>=3)confirmDraw();
-  if(e.key==='Escape'){
-    if(drawing)cancelDraw();
-    else if(edZoom>1){edZoom=1;edPanX=0;edPanY=0;applyEditorTransform();}
-  }
-  // Delete last point with Backspace during draw
-  if(e.key==='Backspace'&&drawing&&dPts.length>0){
-    dPts.pop();
-    updateDrawPointCount();
-    renderSvg();
-  }
-});
+      /* Frame progress bar */
+      .fp-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .fp-label {
+        font-size: 9px;
+        color: var(--muted);
+        letter-spacing: 0.08em;
+        display: flex;
+        justify-content: space-between;
+      }
+      .fp-bar {
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        position: relative;
+        overflow: hidden;
+      }
+      .fp-fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        background: var(--accent);
+        border-radius: 2px;
+        transition: width 0.2s;
+      }
 
-// ═══════════════════════════════════
-// UNITS
-// ═══════════════════════════════════
-document.getElementById('addBtn').addEventListener('click',()=>{
-  const u={id:uid++, name:'Lote '+(units.length+1), type:'', area:'', price:'', status:'available', img:'', ctaEnabled:false, cta:'Saber mais', ctaLink:'', frames:{}};
-  units.push(u);
-  selectUnit(u.id);
-  renderUnitList();
-  showToast('Unidade criada — desenha a zona no canvas');
-  startDraw();
-});
+      /* Frame grid */
+      .fg {
+        display: grid;
+        grid-template-columns: repeat(17, 1fr);
+        gap: 2px;
+      }
+      .fb {
+        height: 16px;
+        border: 1px solid var(--border);
+        background: var(--white);
+        cursor: pointer;
+        transition: all 0.1s;
+        border-radius: 1px;
+        font-size: 0;
+      }
+      .fb:hover {
+        border-color: var(--accent);
+      }
+      .fb.mapped {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      .fb.cur {
+        box-shadow: 0 0 0 2px var(--text);
+        z-index: 1;
+      }
+      .fb.mapped.cur {
+        box-shadow: 0 0 0 2px var(--text);
+      }
 
-function selectUnit(id){
-  activeId=id;
-  const u=units.find(u=>u.id===id);
-  document.getElementById('tlUnit').textContent=u?u.name:'—';
-  document.getElementById('fgSection').style.display='block';
-  document.getElementById('fgUnitName').textContent=u?u.name:'—';
-  renderUnitList();
-  renderFGrid();
-  renderSvg();
-  updateFrameStatus();
-  updateCopyButtons();
-}
+      /* Mode indicator */
+      .mode-pill {
+        font-size: 9px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 3px 8px;
+        border-radius: 2px;
+        font-weight: 500;
+      }
+      .mode-pill.navigate {
+        background: #eee;
+        color: var(--muted);
+      }
+      .mode-pill.draw {
+        background: var(--accent);
+        color: var(--white);
+      }
+      .mode-pill.edit {
+        background: var(--blue);
+        color: var(--white);
+      }
 
-function renderUnitList(){
-  const el=document.getElementById('uList');
-  el.innerHTML='';
-  document.getElementById('ucnt').textContent=units.length+' unidade'+(units.length!==1?'s':'');
-  if(!units.length){
-    el.innerHTML='<div style="font-size:10px;color:var(--muted);text-align:center;padding:10px 0">Sem unidades.</div>';
-    return;
-  }
-  units.forEach(u=>{
-    const cnt=Object.keys(u.frames).length;
-    const item=document.createElement('div');
-    item.className='ui'+(activeId===u.id?' on':'');
-    item.innerHTML=`
+      /* Draw instructions */
+      .draw-hint {
+        font-size: 10px;
+        color: var(--muted);
+        line-height: 1.7;
+        padding: 8px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-left: 2px solid var(--accent);
+      }
+      .draw-step {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        margin: 3px 0;
+      }
+      .draw-step-num {
+        background: var(--accent);
+        color: var(--white);
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        font-size: 8px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+      .draw-step-text {
+        font-size: 10px;
+        color: var(--text);
+        line-height: 1.5;
+      }
+      .draw-point-count {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--accent);
+        text-align: center;
+        padding: 4px 0;
+      }
+
+      /* Form fields */
+      .fg2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+      .fr {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .fr label {
+        font-size: 8px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .fr input,
+      .fr select {
+        font-family: "Jost", sans-serif;
+        font-size: 11px;
+        color: var(--text);
+        border: 1px solid var(--border);
+        background: var(--bg);
+        padding: 5px 7px;
+        outline: none;
+        width: 100%;
+        transition: border-color 0.15s;
+      }
+      .fr input:focus,
+      .fr select:focus {
+        border-color: var(--accent);
+      }
+      .img-up {
+        width: 100%;
+        padding: 6px;
+        border: 1px dashed var(--border);
+        background: var(--bg);
+        color: var(--muted);
+        font-size: 9px;
+        cursor: pointer;
+        text-align: center;
+        transition: border-color 0.2s;
+        font-family: "Jost", sans-serif;
+      }
+      /* CTA Toggle */
+      .cta-toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 2px;
+      }
+      .cta-toggle-label {
+        font-size: 9px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+        font-weight: 500;
+      }
+      .toggle-wrap {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .toggle {
+        position: relative;
+        width: 32px;
+        height: 18px;
+        flex-shrink: 0;
+      }
+      .toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        position: absolute;
+      }
+      .toggle-track {
+        position: absolute;
+        inset: 0;
+        background: var(--border);
+        border-radius: 9px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .toggle input:checked + .toggle-track {
+        background: var(--accent);
+      }
+      .toggle-thumb {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 12px;
+        height: 12px;
+        background: var(--white);
+        border-radius: 50%;
+        transition: transform 0.2s;
+        pointer-events: none;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      }
+      .toggle input:checked ~ .toggle-thumb {
+        transform: translateX(14px);
+      }
+      .toggle-val {
+        font-size: 9px;
+        color: var(--muted);
+        letter-spacing: 0.06em;
+        min-width: 20px;
+      }
+      .cta-fields {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+      .cta-fields.hidden {
+        display: none;
+      }
+      .img-up:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .img-th {
+        width: 100%;
+        height: 50px;
+        object-fit: cover;
+        display: none;
+        border: 1px solid var(--border);
+        margin-bottom: 3px;
+      }
+      .img-th.on {
+        display: block;
+      }
+
+      /* Copy zone button */
+      .copy-zone-row {
+        display: flex;
+        gap: 5px;
+        margin-top: 4px;
+      }
+      .copy-zone-row .tb-btn {
+        flex: 1;
+        padding: 6px;
+        font-size: 8px;
+        text-align: center;
+      }
+
+      /* BOTTOM / TIMELINE */
+      .timeline {
+        grid-column: 1/-1;
+        background: var(--text);
+        display: flex;
+        align-items: center;
+        padding: 0 14px;
+        gap: 14px;
+      }
+      .tl-info {
+        font-size: 9px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.4);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .tl-info strong {
+        color: var(--accent);
+      }
+      .tl-hint {
+        font-size: 9px;
+        color: rgba(255, 255, 255, 0.25);
+        margin-left: auto;
+      }
+
+      /* SVG drawing */
+      .z-fill {
+        fill: rgba(200, 169, 110, 0.1);
+        stroke: rgba(200, 169, 110, 0.55);
+        stroke-width: 0.6px;
+        vector-effect: non-scaling-stroke;
+        cursor: pointer;
+        transition: fill 0.15s;
+      }
+      .z-fill:hover {
+        fill: rgba(200, 169, 110, 0.22);
+      }
+      .z-fill.active {
+        fill: rgba(200, 169, 110, 0.28);
+        stroke: var(--accent);
+        stroke-width: 1.5px;
+        vector-effect: non-scaling-stroke;
+      }
+      .z-lbl {
+        pointer-events: none;
+        font-family: "Jost", sans-serif;
+        font-weight: 600;
+        font-size: 1.2px;
+        fill: rgba(200, 169, 110, 0.9);
+      }
+      .v-handle {
+        fill: var(--accent);
+        stroke: var(--white);
+        stroke-width: 1px;
+        vector-effect: non-scaling-stroke;
+        cursor: move;
+      }
+      .v-handle:hover {
+        fill: var(--dark);
+      }
+      .dp-preview {
+        fill: rgba(200, 169, 110, 0.12);
+        stroke: rgba(200, 169, 110, 0.7);
+        stroke-width: 1.2px;
+        vector-effect: non-scaling-stroke;
+        stroke-dasharray: 4 2;
+        pointer-events: none;
+      }
+      .dp-point {
+        fill: var(--accent);
+        stroke: var(--white);
+        stroke-width: 1.5px;
+        vector-effect: non-scaling-stroke;
+        cursor: move;
+      }
+      .dp-line {
+        stroke: rgba(200, 169, 110, 0.5);
+        stroke-width: 0.8px;
+        vector-effect: non-scaling-stroke;
+        stroke-dasharray: 3 2;
+        pointer-events: none;
+      }
+      .close-hint {
+        fill: rgba(200, 169, 110, 0.3);
+        stroke: var(--accent);
+        stroke-width: 1.5px;
+        vector-effect: non-scaling-stroke;
+        pointer-events: none;
+        stroke-dasharray: 2 2;
+      }
+
+      /* Upload overlay */
+      #uploadOv {
+        position: fixed;
+        inset: 0;
+        background: var(--bg);
+        z-index: 999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #uploadOv.gone {
+        display: none;
+      }
+      .up-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        width: min(440px, 90vw);
+      }
+      .up-title {
+        font-family: "Cormorant Garamond", serif;
+        font-size: clamp(22px, 5vw, 34px);
+        font-weight: 300;
+        text-align: center;
+        line-height: 1.2;
+      }
+      .up-title em {
+        font-style: italic;
+        color: var(--accent);
+      }
+      .dropbox {
+        width: 100%;
+        border: 1px dashed var(--border);
+        padding: 32px 20px;
+        text-align: center;
+        background: var(--white);
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        transition: all 0.2s;
+      }
+      .dropbox:hover,
+      .dropbox.over {
+        border-color: var(--accent);
+        background: #fdfaf6;
+        border-style: solid;
+      }
+      .drop-ico {
+        width: 40px;
+        height: 40px;
+        border: 1px solid var(--border);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--accent);
+      }
+      .drop-lbl {
+        font-size: 12px;
+        color: var(--text);
+      }
+      .drop-sub {
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .pb-wrap {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .pb {
+        height: 1px;
+        background: var(--border);
+        position: relative;
+      }
+      .pb-f {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        background: var(--accent);
+        transition: width 0.1s;
+      }
+      .pb-txt {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text);
+      }
+      .pb-eta {
+        font-size: 9px;
+        color: var(--muted);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      #fInput,
+      #iInput {
+        display: none;
+      }
+
+      /* Toast notification */
+      .toast {
+        position: fixed;
+        bottom: 70px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: var(--text);
+        color: var(--white);
+        padding: 8px 16px;
+        font-size: 11px;
+        border-radius: 4px;
+        opacity: 0;
+        transition: all 0.3s;
+        z-index: 100;
+        pointer-events: none;
+        white-space: nowrap;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="toast" id="toast"></div>
+
+    <!-- UPLOAD -->
+    <div id="uploadOv">
+      <div class="up-inner">
+        <div
+          style="
+            font-family: &quot;Cormorant Garamond&quot;, serif;
+            font-size: 11px;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--muted);
+          "
+        >
+          360° Builder
+        </div>
+        <div class="up-title">Carrega as <em>34 frames</em></div>
+        <div class="dropbox" id="dropbox">
+          <div class="drop-ico">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <polyline points="16 16 12 12 8 16" />
+              <line x1="12" y1="12" x2="12" y2="21" />
+              <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+            </svg>
+          </div>
+          <div class="drop-lbl">Arrasta as frames aqui</div>
+          <div class="drop-sub">Turntable camera.0000 → .0033</div>
+          <button
+            style="
+              font-family: &quot;Jost&quot;, sans-serif;
+              font-size: 10px;
+              font-weight: 500;
+              letter-spacing: 0.15em;
+              text-transform: uppercase;
+              background: var(--text);
+              color: var(--white);
+              border: none;
+              padding: 10px 24px;
+              cursor: pointer;
+            "
+            id="selBtn"
+          >
+            Selecionar
+          </button>
+          <input type="file" id="fInput" multiple accept="image/*" />
+        </div>
+        <div class="pb-wrap" id="pbWrap" style="display: none">
+          <div class="pb"><div class="pb-f" id="pbF"></div></div>
+          <div style="display: flex; justify-content: space-between">
+            <span class="pb-txt" id="pbTxt">0 / 0</span
+            ><span class="pb-eta" id="pbEta"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- APP -->
+    <div id="app">
+      <!-- TOPBAR -->
+      <div class="topbar">
+        <div class="tb-logo">360° Builder</div>
+        <div class="tb-div"></div>
+        <div class="tab-group">
+          <button class="tab on" id="t1" onclick="goTab(1)">1 · Mapear</button>
+          <button class="tab" id="t2" onclick="goTab(2)">2 · Cards</button>
+          <button class="tab" id="t3" onclick="goTab(3)">3 · Exportar</button>
+        </div>
+        <div class="tb-spacer"></div>
+        <span id="ucnt" style="font-size: 9px; color: var(--muted)"
+          >0 unidades</span
+        >
+        <button class="tb-btn" id="addBtn">+ Unidade</button>
+        <div class="tb-div"></div>
+        <button
+          class="tb-btn"
+          id="saveProjectBtn"
+          title="Guardar projeto como JSON"
+        >
+          💾 Guardar
+        </button>
+        <button
+          class="tb-btn"
+          id="loadProjectBtn"
+          title="Carregar projeto JSON"
+        >
+          📂 Carregar
+        </button>
+        <input
+          type="file"
+          id="projectInput"
+          accept=".json"
+          style="display: none"
+        />
+        <div class="tb-div"></div>
+        <button class="tb-btn accent" id="genBtn">⬇ Gerar HTML</button>
+        <div id="genSpin" style="display: none; align-items: center; gap: 5px">
+          <div class="spin"></div>
+          <span style="font-size: 9px; color: var(--muted)">A gerar...</span>
+        </div>
+      </div>
+
+      <!-- CANVAS -->
+      <div class="canvas-col" id="canvasCol">
+        <div
+          id="imgWrap"
+          style="
+            position: relative;
+            display: inline-block;
+            line-height: 0;
+            transform-origin: center center;
+          "
+        >
+          <img
+            id="cImg"
+            src=""
+            alt=""
+            draggable="false"
+            style="
+              display: block;
+              max-width: 100%;
+              max-height: 100%;
+              user-select: none;
+              -webkit-user-drag: none;
+            "
+          />
+          <svg
+            id="oSvg"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            style="
+              position: absolute;
+              inset: 0;
+              width: 100%;
+              height: 100%;
+              overflow: visible;
+            "
+          ></svg>
+        </div>
+      </div>
+
+      <!-- PANEL -->
+      <div class="panel" id="panel">
+        <!-- TAB 1: MAP -->
+        <div id="p1">
+          <!-- Unit list -->
+          <div class="ps" style="max-height: 200px; overflow-y: auto">
+            <div class="ps-hd">
+              Unidades
+              <span class="mode-pill navigate" id="modePill">Navegar</span>
+            </div>
+            <div class="ul" id="uList">
+              <div
+                style="
+                  font-size: 10px;
+                  color: var(--muted);
+                  text-align: center;
+                  padding: 12px 0;
+                "
+              >
+                Sem unidades.<br />Clica em + Unidade.
+              </div>
+            </div>
+          </div>
+
+          <!-- Frame grid for selected unit -->
+          <div class="ps" id="fgSection" style="display: none">
+            <div class="ps-hd">
+              Frames —
+              <span id="fgUnitName" style="color: var(--accent)">—</span>
+              <span id="fgProgress" style="font-size: 9px; color: var(--muted)"
+                >0/34</span
+              >
+            </div>
+            <div class="fp-wrap">
+              <div class="fp-bar"><div class="fp-fill" id="fpFill"></div></div>
+              <div class="fp-label">
+                <span id="fpLbl">0 de 34 frames mapeadas</span
+                ><span id="fpPct">0%</span>
+              </div>
+            </div>
+            <div class="fg" id="fGrid"></div>
+
+            <!-- Draw section -->
+            <div id="drawSection" style="display: none">
+              <div class="draw-hint" id="drawHint">
+                <div class="draw-step">
+                  <div class="draw-step-num">1</div>
+                  <div class="draw-step-text">
+                    Clica no ponto central da zona na imagem
+                  </div>
+                </div>
+                <div class="draw-point-count" id="drawPtCount"></div>
+              </div>
+              <div
+                style="display: flex; gap: 5px; margin-top: 6px"
+                id="drawBtns"
+              >
+                <button
+                  class="tb-btn"
+                  id="cancelDraw"
+                  style="flex: 1; padding: 7px"
+                >
+                  ✕ Cancelar
+                </button>
+              </div>
+            </div>
+
+            <!-- Draw / Edit button for current frame -->
+            <div
+              class="copy-zone-row"
+              id="drawCurrentRow"
+              style="display: none"
+            >
+              <button
+                class="tb-btn accent"
+                id="drawCurrentBtn"
+                style="flex: 1; padding: 7px"
+              >
+                ✏ Desenhar nesta frame
+              </button>
+              <button
+                class="tb-btn"
+                id="deleteZoneBtn"
+                style="padding: 7px; color: var(--red)"
+                title="Apagar zona desta frame"
+              >
+                🗑
+              </button>
+            </div>
+            <!-- Copy zone tools -->
+            <div class="copy-zone-row" id="copyZoneRow" style="display: none">
+              <button
+                class="tb-btn"
+                id="copyToPrevBtn"
+                title="Copiar zona para a frame anterior"
+              >
+                ← Copiar p/ anterior
+              </button>
+              <button
+                class="tb-btn"
+                id="copyToNextBtn"
+                title="Copiar zona para a próxima frame"
+              >
+                Copiar p/ seguinte →
+              </button>
+            </div>
+            <div class="copy-zone-row" id="copyAllRow" style="display: none">
+              <button
+                class="tb-btn"
+                id="copyToAllBtn"
+                title="Copiar esta zona para todas as frames vazias"
+                style="flex: 1"
+              >
+                Copiar para todas as frames vazias
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: CARDS -->
+        <div
+          id="p2"
+          style="
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            flex: 1;
+          "
+        >
+          <div
+            class="ps"
+            style="
+              overflow-y: auto;
+              flex: 1;
+              min-height: 0;
+              border-bottom: 1px solid var(--border);
+            "
+          >
+            <div class="ps-hd">Seleciona unidade</div>
+            <div class="ul" id="cList"></div>
+          </div>
+          <div class="ps scroll" id="cForm" style="display: none">
+            <div class="ps-hd" id="cFormTitle">Dados do card</div>
+            <div class="fg2">
+              <div class="fr">
+                <label>Nome / Nº</label
+                ><input type="text" id="cN" placeholder="Lote 1" />
+              </div>
+              <div class="fr">
+                <label>Tipologia</label
+                ><input type="text" id="cTy" placeholder="T3" />
+              </div>
+            </div>
+            <div class="fg2">
+              <div class="fr">
+                <label>Área (m²)</label
+                ><input type="text" id="cA" placeholder="142" />
+              </div>
+              <div class="fr">
+                <label>Preço</label
+                ><input type="text" id="cP" placeholder="285.000€" />
+              </div>
+            </div>
+            <div class="fr">
+              <label>Estado</label>
+              <select id="cSt">
+                <option value="available">Disponível</option>
+                <option value="sold">Vendido</option>
+                <option value="soon">Brevemente disponível</option>
+                <option value="starting">A iniciar construção</option>
+                <option value="not-started">Por iniciar</option>
+              </select>
+            </div>
+            <div class="fr">
+              <label>Imagem interior</label>
+              <img class="img-th" id="cIm" src="" alt="" />
+              <div class="img-up" id="cImBtn">+ Adicionar imagem</div>
+              <input type="file" id="iInput" accept="image/*" />
+            </div>
+            <div class="cta-toggle-row">
+              <span class="cta-toggle-label">Botão CTA</span>
+              <div class="toggle-wrap">
+                <span class="toggle-val" id="ctaToggleVal">Off</span>
+                <label class="toggle">
+                  <input type="checkbox" id="ctaToggle" />
+                  <div class="toggle-track"></div>
+                  <div class="toggle-thumb"></div>
+                </label>
+              </div>
+            </div>
+            <div class="cta-fields hidden" id="ctaFields">
+              <div class="fr">
+                <label>Texto CTA</label
+                ><input type="text" id="cCt" placeholder="Saber mais" />
+              </div>
+              <div class="fr">
+                <label>Link CTA</label
+                ><input type="text" id="cCl" placeholder="mailto:..." />
+              </div>
+            </div>
+            <button
+              class="tb-btn accent"
+              style="padding: 9px; margin-top: 2px"
+              id="cSave"
+            >
+              Guardar
+            </button>
+          </div>
+        </div>
+
+        <!-- TAB 3: EXPORT -->
+        <div
+          id="p3"
+          style="
+            display: none;
+            padding: 14px;
+            flex-direction: column;
+            gap: 10px;
+          "
+        >
+          <div style="font-size: 10px; color: var(--muted); line-height: 1.7">
+            Gera um <strong>index.html</strong> com todas as imagens e zonas
+            incorporadas.<br />
+            Cada zona tem coordenadas <strong>exatas por frame</strong>.
+          </div>
+          <div
+            style="
+              font-size: 10px;
+              color: var(--muted);
+              line-height: 1.6;
+              padding: 8px 10px;
+              border-left: 2px solid var(--accent);
+              background: var(--bg);
+            "
+            id="exportSummary"
+          ></div>
+          <button class="tb-btn accent" style="padding: 11px" id="genBtn2">
+            ⬇ Gerar index.html
+          </button>
+        </div>
+      </div>
+
+      <!-- TIMELINE -->
+      <div class="timeline">
+        <div class="tl-info">
+          Frame <strong id="tlFrame">1</strong> /
+          <strong id="tlTotal">34</strong>
+        </div>
+        <div class="tl-info">Unidade <strong id="tlUnit">—</strong></div>
+        <div class="tl-info" id="tlMapped" style="display: none">
+          Esta frame <strong style="color: var(--green)">✓ mapeada</strong>
+        </div>
+        <div class="tl-hint" id="tlHint">
+          ← → navegar · arrasta imagem para rodar · D = desenhar
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ═══════════════════════════════════
+      // STATE
+      // ═══════════════════════════════════
+      const TOTAL = 34;
+      let frames = [];
+      let units = [];
+      let activeId = null;
+      let editCardId = null;
+      let curFrame = 0;
+      let tab = 1;
+      let drawing = false;
+      let dPts = [];
+      let vDrag = null;
+      let uid = 1;
+
+      // ═══════════════════════════════════
+      // TOAST
+      // ═══════════════════════════════════
+      function showToast(msg, duration = 2000) {
+        const t = document.getElementById("toast");
+        t.textContent = msg;
+        t.classList.add("show");
+        clearTimeout(t._timer);
+        t._timer = setTimeout(() => t.classList.remove("show"), duration);
+      }
+
+      // ═══════════════════════════════════
+      // UPLOAD
+      // ═══════════════════════════════════
+      const dropbox = document.getElementById("dropbox");
+      const fInput = document.getElementById("fInput");
+      document.getElementById("selBtn").addEventListener("click", (e) => {
+        e.stopPropagation();
+        fInput.click();
+      });
+      fInput.addEventListener("change", (e) => {
+        if (e.target.files.length) loadFiles(e.target.files);
+      });
+      dropbox.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropbox.classList.add("over");
+      });
+      dropbox.addEventListener("dragleave", () =>
+        dropbox.classList.remove("over"),
+      );
+      dropbox.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropbox.classList.remove("over");
+        if (e.dataTransfer.files.length) loadFiles(e.dataTransfer.files);
+      });
+
+      function loadFiles(files) {
+        const sorted = Array.from(files).sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, { numeric: true }),
+        );
+        const toLoad = sorted.slice(0, TOTAL);
+        let done = 0,
+          t0 = null;
+        frames = [];
+        document.getElementById("pbWrap").style.display = "flex";
+        document.getElementById("pbWrap").style.flexDirection = "column";
+        dropbox.style.display = "none";
+        toLoad.forEach((file, i) => {
+          const r = new FileReader();
+          r.onload = (ev) => {
+            frames[i] = ev.target.result;
+            done++;
+            if (!t0 && done === 1) t0 = Date.now();
+            document.getElementById("pbF").style.width =
+              (done / toLoad.length) * 100 + "%";
+            document.getElementById("pbTxt").textContent =
+              done + " / " + toLoad.length;
+            if (t0 && done > 1 && done < toLoad.length) {
+              const eta = Math.ceil(
+                (toLoad.length - done) / (done / ((Date.now() - t0) / 1000)),
+              );
+              document.getElementById("pbEta").textContent =
+                eta < 2
+                  ? "A terminar..."
+                  : eta < 60
+                    ? "~" + eta + "s"
+                    : "~" + Math.ceil(eta / 60) + "min";
+            }
+            if (done === toLoad.length) {
+              document.getElementById("pbEta").textContent = "✓";
+              setTimeout(() => {
+                document.getElementById("uploadOv").classList.add("gone");
+                gotoFrame(0);
+              }, 300);
+            }
+          };
+          r.readAsDataURL(file);
+        });
+      }
+
+      // ═══════════════════════════════════
+      // TABS
+      // ═══════════════════════════════════
+      function goTab(n) {
+        tab = n;
+        [1, 2, 3].forEach((i) => {
+          document.getElementById("t" + i).classList.toggle("on", i === n);
+          document.getElementById("p" + i).style.display =
+            i === n ? (n === 1 ? "block" : "flex") : "none";
+        });
+        if (n === 2) renderCardList();
+        if (n === 3) updateExportSummary();
+      }
+
+      // ═══════════════════════════════════
+      // FRAME NAV
+      // ═══════════════════════════════════
+      const cImg = document.getElementById("cImg");
+      const oSvg = document.getElementById("oSvg");
+
+      function gotoFrame(n) {
+        curFrame = Math.max(0, Math.min(frames.length - 1, n));
+        cImg.src = frames[curFrame];
+        document.getElementById("tlFrame").textContent = curFrame + 1;
+        document.getElementById("tlTotal").textContent = frames.length;
+        updateFrameStatus();
+        renderFGrid();
+        renderSvg();
+        updateCopyButtons();
+      }
+
+      function updateFrameStatus() {
+        const u = units.find((u) => u.id === activeId);
+        const mapped = u && u.frames[curFrame] != null;
+        document.getElementById("tlMapped").style.display = mapped
+          ? "flex"
+          : "none";
+      }
+
+      // Drag to rotate
+      let imgDrag = false,
+        imgDragX = 0,
+        imgDragF = 0;
+      cImg.addEventListener("mousedown", (e) => {
+        if (drawing || edPanning || e.button !== 0 || e.altKey) return;
+        if (edZoom > 1) {
+          edPanning = true;
+          edPanSX = e.clientX;
+          edPanSY = e.clientY;
+          edPanOX = edPanX;
+          edPanOY = edPanY;
+          e.preventDefault();
+          return;
+        }
+        imgDrag = true;
+        imgDragX = e.clientX;
+        imgDragF = curFrame;
+        e.preventDefault();
+      });
+      window.addEventListener("mousemove", (e) => {
+        if (!imgDrag) return;
+        const sens = ((cImg.offsetWidth || 800) / TOTAL) * 0.7;
+        const n = imgDragF - Math.round((e.clientX - imgDragX) / sens);
+        const cc = Math.max(
+          0,
+          Math.min(frames.length - 1, ((n % TOTAL) + TOTAL) % TOTAL),
+        );
+        if (cc !== curFrame) gotoFrame(cc);
+      });
+      window.addEventListener("mouseup", () => {
+        imgDrag = false;
+      });
+
+      window.addEventListener("keydown", (e) => {
+        if (
+          ["INPUT", "SELECT", "TEXTAREA"].includes(
+            document.activeElement.tagName,
+          )
+        )
+          return;
+        if (e.ctrlKey || e.metaKey) return;
+        if (e.key === "ArrowLeft" && !drawing) gotoFrame(curFrame - 1);
+        if (e.key === "ArrowRight" && !drawing) gotoFrame(curFrame + 1);
+        if (e.key === "d" && activeId && !drawing) startDraw();
+        if (e.key === "Enter" && drawing && dPts.length >= 3) confirmDraw();
+        if (e.key === "Escape") {
+          if (drawing) cancelDraw();
+          else if (edZoom > 1) {
+            edZoom = 1;
+            edPanX = 0;
+            edPanY = 0;
+            applyEditorTransform();
+          }
+        }
+        // Backspace durante draw → limpar zona para recolocar
+        if (e.key === "Backspace" && drawing && dPts.length > 0) {
+          dPts = [];
+          updateDrawPointCount();
+          renderSvg();
+        }
+      });
+
+      // ═══════════════════════════════════
+      // UNITS
+      // ═══════════════════════════════════
+      document.getElementById("addBtn").addEventListener("click", () => {
+        const u = {
+          id: uid++,
+          name: "Lote " + (units.length + 1),
+          type: "",
+          area: "",
+          price: "",
+          status: "available",
+          img: "",
+          ctaEnabled: false,
+          cta: "Saber mais",
+          ctaLink: "",
+          frames: {},
+        };
+        units.push(u);
+        selectUnit(u.id);
+        renderUnitList();
+        showToast("Unidade criada — desenha a zona no canvas");
+        startDraw();
+      });
+
+      function selectUnit(id) {
+        activeId = id;
+        const u = units.find((u) => u.id === id);
+        document.getElementById("tlUnit").textContent = u ? u.name : "—";
+        document.getElementById("fgSection").style.display = "block";
+        document.getElementById("fgUnitName").textContent = u ? u.name : "—";
+        renderUnitList();
+        renderFGrid();
+        renderSvg();
+        updateFrameStatus();
+        updateCopyButtons();
+      }
+
+      function renderUnitList() {
+        const el = document.getElementById("uList");
+        el.innerHTML = "";
+        document.getElementById("ucnt").textContent =
+          units.length + " unidade" + (units.length !== 1 ? "s" : "");
+        if (!units.length) {
+          el.innerHTML =
+            '<div style="font-size:10px;color:var(--muted);text-align:center;padding:10px 0">Sem unidades.</div>';
+          return;
+        }
+        units.forEach((u) => {
+          const cnt = Object.keys(u.frames).length;
+          const item = document.createElement("div");
+          item.className = "ui" + (activeId === u.id ? " on" : "");
+          item.innerHTML = `
       <div class="ui-dot ${u.status}"></div>
       <div class="ui-name">${u.name}</div>
       <div class="ui-mapped">${cnt}/34</div>
       <button class="ui-del" data-id="${u.id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>`;
-    item.addEventListener('click',()=>selectUnit(u.id));
-    item.querySelector('.ui-del').addEventListener('click',e=>{
-      e.stopPropagation();
-      units=units.filter(x=>x.id!==u.id);
-      if(activeId===u.id){activeId=null;document.getElementById('fgSection').style.display='none';}
-      renderUnitList();renderSvg();
-    });
-    el.appendChild(item);
-  });
-}
-
-// ═══════════════════════════════════
-// FRAME GRID
-// ═══════════════════════════════════
-function renderFGrid(){
-  const grid=document.getElementById('fGrid');
-  grid.innerHTML='';
-  const u=units.find(u=>u.id===activeId);
-  const cnt=u?Object.keys(u.frames).length:0;
-  const pct=Math.round(cnt/TOTAL*100);
-  document.getElementById('fpFill').style.width=pct+'%';
-  document.getElementById('fpLbl').textContent=cnt+' de '+TOTAL+' frames mapeadas';
-  document.getElementById('fpPct').textContent=pct+'%';
-  document.getElementById('fgProgress').textContent=cnt+'/'+TOTAL;
-
-  for(let i=0;i<TOTAL;i++){
-    const btn=document.createElement('button');
-    const hasPts=u&&u.frames[i];
-    btn.className='fb'+(hasPts?' mapped':'')+(i===curFrame?' cur':'');
-    btn.title='Frame '+(i+1)+(hasPts?' ✓':'');
-    btn.addEventListener('click',()=>{
-      gotoFrame(i);
-      // Allow manual draw on any frame
-      if(activeId && !drawing) {
-        const uu = units.find(u=>u.id===activeId);
-        if(!uu.frames[i]) {
-          startDraw();
-        }
-      }
-    });
-    grid.appendChild(btn);
-  }
-}
-
-// ═══════════════════════════════════
-// COPY ZONE TOOLS
-// ═══════════════════════════════════
-function updateCopyButtons() {
-  const u = units.find(u=>u.id===activeId);
-  const hasCurrent = u && u.frames[curFrame];
-  const show = hasCurrent && !drawing;
-  document.getElementById('copyZoneRow').style.display = show ? 'flex' : 'none';
-  document.getElementById('copyAllRow').style.display = show ? 'flex' : 'none';
-  // Show draw/edit button when not in draw mode and unit is selected
-  document.getElementById('drawCurrentRow').style.display = (!drawing && activeId) ? 'flex' : 'none';
-  const drawBtn = document.getElementById('drawCurrentBtn');
-  if (hasCurrent) {
-    drawBtn.textContent = '✏ Re-desenhar esta frame';
-  } else {
-    drawBtn.textContent = '✏ Desenhar nesta frame';
-  }
-  document.getElementById('deleteZoneBtn').style.display = hasCurrent ? '' : 'none';
-}
-
-document.getElementById('drawCurrentBtn').addEventListener('click', () => {
-  if (activeId && !drawing) startDraw();
-});
-
-document.getElementById('deleteZoneBtn').addEventListener('click', () => {
-  const u = units.find(u=>u.id===activeId);
-  if (u && u.frames[curFrame]) {
-    delete u.frames[curFrame];
-    renderFGrid(); renderSvg(); updateFrameStatus(); updateCopyButtons();
-    showToast('Zona removida da frame ' + (curFrame+1));
-  }
-});
-
-document.getElementById('copyToPrevBtn').addEventListener('click', () => {
-  const u = units.find(u=>u.id===activeId);
-  if (!u || !u.frames[curFrame] || curFrame <= 0) return;
-  const target = curFrame - 1;
-  u.frames[target] = u.frames[curFrame].map(p=>({...p}));
-  gotoFrame(target);
-  showToast('Zona copiada para frame ' + (target+1));
-});
-
-document.getElementById('copyToNextBtn').addEventListener('click', () => {
-  const u = units.find(u=>u.id===activeId);
-  if (!u || !u.frames[curFrame] || curFrame >= TOTAL-1) return;
-  const target = curFrame + 1;
-  u.frames[target] = u.frames[curFrame].map(p=>({...p}));
-  gotoFrame(target);
-  showToast('Zona copiada para frame ' + (target+1));
-});
-
-document.getElementById('copyToAllBtn').addEventListener('click', () => {
-  const u = units.find(u=>u.id===activeId);
-  if (!u || !u.frames[curFrame]) return;
-  let count = 0;
-  for (let i=0; i<TOTAL; i++) {
-    if (!u.frames[i]) {
-      u.frames[i] = u.frames[curFrame].map(p=>({...p}));
-      count++;
-    }
-  }
-  renderFGrid();
-  updateCopyButtons();
-  showToast(count + ' frames preenchidas');
-});
-
-// ═══════════════════════════════════
-// DRAW
-// ═══════════════════════════════════
-function updateDrawPointCount() {
-  const el = document.getElementById('drawPtCount');
-  if (dPts.length === 0) el.textContent = '';
-  else if (dPts.length < 3) el.textContent = dPts.length + ' ponto' + (dPts.length>1?'s':'') + ' — faltam ' + (3-dPts.length);
-  else el.textContent = dPts.length + ' pontos ✓ pronto para fechar';
-  document.getElementById('confirmDraw').disabled = dPts.length < 3;
-}
-
-function startDraw(){
-  if(!activeId)return;
-  const u=units.find(u=>u.id===activeId);
-  dPts = u&&u.frames[curFrame] ? [...u.frames[curFrame].map(p=>({...p}))] : [];
-  drawing=true;
-  document.getElementById('canvasCol').classList.add('draw-mode');
-  document.getElementById('modePill').className='mode-pill draw';
-  document.getElementById('modePill').textContent='Desenhar';
-  document.getElementById('drawSection').style.display='block';
-  document.getElementById('copyZoneRow').style.display='none';
-  document.getElementById('copyAllRow').style.display='none';
-  document.getElementById('tlHint').textContent='Clica para pontos · Backspace = apagar último · Enter/duplo-clique = fechar';
-  updateDrawPointCount();
-  renderSvg();
-}
-
-function cancelDraw(){
-  drawing=false; dPts=[];
-  document.getElementById('canvasCol').classList.remove('draw-mode');
-  document.getElementById('modePill').className='mode-pill navigate';
-  document.getElementById('modePill').textContent='Navegar';
-  document.getElementById('drawSection').style.display='none';
-  document.getElementById('tlHint').textContent='← → navegar · arrasta imagem · D = desenhar';
-  renderSvg();
-  updateCopyButtons();
-}
-
-function confirmDraw(){
-  if(!activeId||dPts.length<3)return;
-  const u=units.find(u=>u.id===activeId);
-  u.frames[curFrame]=[...dPts.map(p=>({...p}))];
-  showToast('Zona guardada na frame ' + (curFrame+1));
-  cancelDraw();
-  renderFGrid();
-  updateFrameStatus();
-}
-
-document.getElementById('cancelDraw').addEventListener('click',cancelDraw);
-document.getElementById('confirmDraw').addEventListener('click',confirmDraw);
-
-// ═══════════════════════════════════
-// ZOOM / PAN (editor)
-// ═══════════════════════════════════
-let edZoom = 1, edPanX = 0, edPanY = 0;
-let edPanning = false, edPanSX = 0, edPanSY = 0, edPanOX = 0, edPanOY = 0;
-const ZOOM_MIN = 1, ZOOM_MAX = 8, ZOOM_STEP = 0.2;
-const imgWrap = document.getElementById('imgWrap');
-
-function applyEditorTransform() {
-  imgWrap.style.transform = `scale(${edZoom}) translate(${edPanX/edZoom}px,${edPanY/edZoom}px)`;
-}
-
-function clampEdPan() {
-  if (edZoom <= 1) { edPanX = 0; edPanY = 0; return; }
-  const col = document.getElementById('canvasCol').getBoundingClientRect();
-  const iw = cImg.offsetWidth * edZoom, ih = cImg.offsetHeight * edZoom;
-  const maxX = Math.max(0, (iw - col.width) / 2);
-  const maxY = Math.max(0, (ih - col.height) / 2);
-  edPanX = Math.max(-maxX, Math.min(maxX, edPanX));
-  edPanY = Math.max(-maxY, Math.min(maxY, edPanY));
-}
-
-function applyEditorZoom(delta, cx, cy) {
-  const prev = edZoom;
-  edZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, edZoom + delta));
-  if (edZoom === 1) { edPanX = 0; edPanY = 0; }
-  else if (cx !== undefined) {
-    const r = imgWrap.getBoundingClientRect();
-    const ox = cx - (r.left + r.width / 2);
-    const oy = cy - (r.top + r.height / 2);
-    edPanX = (edPanX - ox) * (edZoom / prev) + ox;
-    edPanY = (edPanY - oy) * (edZoom / prev) + oy;
-  }
-  clampEdPan();
-  applyEditorTransform();
-}
-
-document.getElementById('canvasCol').addEventListener('wheel', e => {
-  e.preventDefault();
-  if (e.ctrlKey || e.metaKey || edZoom > 1) {
-    applyEditorZoom((e.deltaY > 0 ? -1 : 1) * ZOOM_STEP * (e.ctrlKey ? 1 : 0.4), e.clientX, e.clientY);
-  } else {
-    if (!imgDrag && !drawing) gotoFrame(curFrame + (e.deltaY > 0 ? 1 : -1));
-  }
-}, { passive: false });
-
-document.getElementById('canvasCol').addEventListener('dblclick', e => {
-  if (drawing) return; // don't reset zoom during draw
-  if (e.target === cImg || e.target === oSvg || e.target.closest('#imgWrap')) {
-    if (edZoom > 1) { edZoom = 1; edPanX = 0; edPanY = 0; applyEditorTransform(); }
-  }
-});
-
-document.getElementById('canvasCol').addEventListener('mousedown', e => {
-  if (e.button === 1 || (e.button === 0 && e.altKey)) {
-    edPanning = true; edPanSX = e.clientX; edPanSY = e.clientY; edPanOX = edPanX; edPanOY = edPanY;
-    e.preventDefault();
-  }
-});
-window.addEventListener('mousemove', e => {
-  if (!edPanning) return;
-  edPanX = edPanOX + (e.clientX - edPanSX);
-  edPanY = edPanOY + (e.clientY - edPanSY);
-  clampEdPan(); applyEditorTransform();
-});
-window.addEventListener('mouseup', e => { if (e.button === 1 || edPanning) edPanning = false; });
-
-let edPinchD0 = 0;
-document.getElementById('canvasCol').addEventListener('touchstart', e => {
-  if (e.touches.length === 2) {
-    imgDrag = false;
-    edPinchD0 = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
-  }
-}, { passive: true });
-document.getElementById('canvasCol').addEventListener('touchmove', e => {
-  if (e.touches.length === 2) {
-    const d = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
-    const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-    const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-    applyEditorZoom((d - edPinchD0) * 0.01, cx, cy);
-    edPinchD0 = d;
-    e.preventDefault();
-  }
-}, { passive: false });
-
-window.addEventListener('keydown', e => {
-  if (['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) return;
-  if ((e.key === '+' || e.key === '=') && e.ctrlKey) { e.preventDefault(); applyEditorZoom(ZOOM_STEP); }
-  if (e.key === '-' && e.ctrlKey) { e.preventDefault(); applyEditorZoom(-ZOOM_STEP); }
-  if (e.key === '0' && e.ctrlKey) { e.preventDefault(); edZoom=1;edPanX=0;edPanY=0;applyEditorTransform(); }
-});
-
-// ═══════════════════════════════════
-// SVG
-// ═══════════════════════════════════
-function svgXY(e) {
-  const r = cImg.getBoundingClientRect();
-  return {
-    x: parseFloat((((e.clientX - r.left) / r.width) * 100).toFixed(2)),
-    y: parseFloat((((e.clientY - r.top) / r.height) * 100).toFixed(2))
-  };
-}
-
-const roImg = new ResizeObserver(() => renderSvg());
-roImg.observe(cImg);
-
-function renderSvg() {
-  oSvg.innerHTML = '';
-  // Non-active units
-  units.forEach((u, i) => {
-    if (u.id === activeId) return;
-    const pts = u.frames[curFrame];
-    if (!pts || pts.length < 3) return;
-    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-    poly.setAttribute('points', pts.map(p => p.x+','+p.y).join(' '));
-    poly.setAttribute('class', 'z-fill');
-    poly.addEventListener('click', () => { if (!drawing) selectUnit(u.id); });
-    oSvg.appendChild(poly);
-    addLabel(pts, u.name || (i+1));
-  });
-
-  // Active unit
-  if (activeId) {
-    const u = units.find(u => u.id === activeId);
-    if (!drawing) {
-      const pts = u.frames[curFrame];
-      if (pts && pts.length >= 3) {
-        const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        poly.setAttribute('points', pts.map(p => p.x+','+p.y).join(' '));
-        poly.setAttribute('class', 'z-fill active');
-        oSvg.appendChild(poly);
-        pts.forEach((p, i) => {
-          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-          circle.setAttribute('cx', p.x); circle.setAttribute('cy', p.y);
-          circle.setAttribute('r', '0.7');
-          circle.setAttribute('class', 'v-handle');
-          circle.dataset.ptIdx = i;
-          oSvg.appendChild(circle);
+          item.addEventListener("click", () => selectUnit(u.id));
+          item.querySelector(".ui-del").addEventListener("click", (e) => {
+            e.stopPropagation();
+            units = units.filter((x) => x.id !== u.id);
+            if (activeId === u.id) {
+              activeId = null;
+              document.getElementById("fgSection").style.display = "none";
+            }
+            renderUnitList();
+            renderSvg();
+          });
+          el.appendChild(item);
         });
-        addLabel(pts, u.name);
       }
-    } else {
-      // Drawing mode
-      // Lines between points
-      if (dPts.length > 1) {
-        for (let i=0; i<dPts.length-1; i++) {
-          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-          line.setAttribute('x1', dPts[i].x); line.setAttribute('y1', dPts[i].y);
-          line.setAttribute('x2', dPts[i+1].x); line.setAttribute('y2', dPts[i+1].y);
-          line.setAttribute('class', 'dp-line');
-          oSvg.appendChild(line);
+
+      // ═══════════════════════════════════
+      // FRAME GRID
+      // ═══════════════════════════════════
+      function renderFGrid() {
+        const grid = document.getElementById("fGrid");
+        grid.innerHTML = "";
+        const u = units.find((u) => u.id === activeId);
+        const cnt = u ? Object.keys(u.frames).length : 0;
+        const pct = Math.round((cnt / TOTAL) * 100);
+        document.getElementById("fpFill").style.width = pct + "%";
+        document.getElementById("fpLbl").textContent =
+          cnt + " de " + TOTAL + " frames mapeadas";
+        document.getElementById("fpPct").textContent = pct + "%";
+        document.getElementById("fgProgress").textContent = cnt + "/" + TOTAL;
+
+        for (let i = 0; i < TOTAL; i++) {
+          const btn = document.createElement("button");
+          const hasPts = u && u.frames[i];
+          btn.className =
+            "fb" + (hasPts ? " mapped" : "") + (i === curFrame ? " cur" : "");
+          btn.title = "Frame " + (i + 1) + (hasPts ? " ✓" : "");
+          btn.addEventListener("click", () => {
+            gotoFrame(i);
+            // Allow manual draw on any frame
+            if (activeId && !drawing) {
+              const uu = units.find((u) => u.id === activeId);
+              if (!uu.frames[i]) {
+                startDraw();
+              }
+            }
+          });
+          grid.appendChild(btn);
         }
       }
-      // Preview polygon fill
-      if (dPts.length >= 3) {
-        const pr = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        pr.setAttribute('points', dPts.map(p => p.x+','+p.y).join(' '));
-        pr.setAttribute('class', 'dp-preview');
-        oSvg.appendChild(pr);
+
+      // ═══════════════════════════════════
+      // COPY ZONE TOOLS
+      // ═══════════════════════════════════
+      function updateCopyButtons() {
+        const u = units.find((u) => u.id === activeId);
+        const hasCurrent = u && u.frames[curFrame] != null;
+        const show = hasCurrent && !drawing;
+        document.getElementById("copyZoneRow").style.display = show
+          ? "flex"
+          : "none";
+        document.getElementById("copyAllRow").style.display = show
+          ? "flex"
+          : "none";
+        // Show draw/edit button when not in draw mode and unit is selected
+        document.getElementById("drawCurrentRow").style.display =
+          !drawing && activeId ? "flex" : "none";
+        const drawBtn = document.getElementById("drawCurrentBtn");
+        if (hasCurrent) {
+          drawBtn.textContent = "✏ Re-desenhar esta frame";
+        } else {
+          drawBtn.textContent = "✏ Desenhar nesta frame";
+        }
+        document.getElementById("deleteZoneBtn").style.display = hasCurrent
+          ? ""
+          : "none";
       }
-      // Close hint on first point
-      if (dPts.length >= 3) {
-        const ch = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        ch.setAttribute('cx', dPts[0].x); ch.setAttribute('cy', dPts[0].y);
-        ch.setAttribute('r', '1.5'); ch.setAttribute('class', 'close-hint');
-        oSvg.appendChild(ch);
-      }
-      // Points (draggable)
-      dPts.forEach((p, i) => {
-        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        circle.setAttribute('cx', p.x); circle.setAttribute('cy', p.y);
-        circle.setAttribute('r', '0.8');
-        circle.setAttribute('class', 'dp-point');
-        circle.dataset.dpIdx = i;
-        oSvg.appendChild(circle);
+
+      document
+        .getElementById("drawCurrentBtn")
+        .addEventListener("click", () => {
+          if (activeId && !drawing) startDraw();
+        });
+
+      document.getElementById("deleteZoneBtn").addEventListener("click", () => {
+        const u = units.find((u) => u.id === activeId);
+        if (u && u.frames[curFrame]) {
+          delete u.frames[curFrame];
+          renderFGrid();
+          renderSvg();
+          updateFrameStatus();
+          updateCopyButtons();
+          showToast("Zona removida da frame " + (curFrame + 1));
+        }
       });
-    }
-  }
-}
 
-function addLabel(pts, label) {
-  const cx = pts.reduce((s,p) => s+p.x, 0) / pts.length;
-  const cy = pts.reduce((s,p) => s+p.y, 0) / pts.length;
-  const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-  t.setAttribute('x', cx); t.setAttribute('y', cy);
-  t.setAttribute('text-anchor', 'middle'); t.setAttribute('dominant-baseline', 'middle');
-  t.setAttribute('class', 'z-lbl'); t.textContent = label;
-  oSvg.appendChild(t);
-}
+      document.getElementById("copyToPrevBtn").addEventListener("click", () => {
+        const u = units.find((u) => u.id === activeId);
+        if (!u || !u.frames[curFrame] || curFrame <= 0) return;
+        const target = curFrame - 1;
+        u.frames[target] = { ...u.frames[curFrame] };
+        gotoFrame(target);
+        showToast("Zona copiada para frame " + (target + 1));
+      });
 
-// SVG click → add draw point or close
-oSvg.addEventListener('click', e => {
-  if (!drawing) return;
-  // Don't add point if we were dragging
-  if (svgV) return;
-  const coords = svgXY(e);
-  if (dPts.length >= 3) {
-    const fp = dPts[0];
-    if (Math.hypot(coords.x - fp.x, coords.y - fp.y) < 3) { confirmDraw(); return; }
-  }
-  dPts.push(coords);
-  updateDrawPointCount();
-  renderSvg();
-});
+      document.getElementById("copyToNextBtn").addEventListener("click", () => {
+        const u = units.find((u) => u.id === activeId);
+        if (!u || !u.frames[curFrame] || curFrame >= TOTAL - 1) return;
+        const target = curFrame + 1;
+        u.frames[target] = { ...u.frames[curFrame] };
+        gotoFrame(target);
+        showToast("Zona copiada para frame " + (target + 1));
+      });
 
-oSvg.addEventListener('dblclick', e => {
-  e.preventDefault();
-  if (drawing && dPts.length >= 3) confirmDraw();
-});
+      document.getElementById("copyToAllBtn").addEventListener("click", () => {
+        const u = units.find((u) => u.id === activeId);
+        if (!u || !u.frames[curFrame]) return;
+        let count = 0;
+        for (let i = 0; i < TOTAL; i++) {
+          if (!u.frames[i]) {
+            u.frames[i] = { ...u.frames[curFrame] };
+            count++;
+          }
+        }
+        renderFGrid();
+        updateCopyButtons();
+        showToast(count + " frames preenchidas");
+      });
 
-// Vertex drag
-let svgV = null;
-let svgVMoved = false;
-oSvg.addEventListener('mousedown', e => {
-  const t = e.target;
-  if (t.classList.contains('v-handle') && !drawing && activeId) {
-    svgV = { type: 'handle', idx: parseInt(t.dataset.ptIdx) };
-    svgVMoved = false;
-    e.preventDefault(); e.stopPropagation();
-  }
-  if (t.classList.contains('dp-point') && drawing) {
-    svgV = { type: 'draw', idx: parseInt(t.dataset.dpIdx) };
-    svgVMoved = false;
-    e.preventDefault(); e.stopPropagation();
-  }
-});
-window.addEventListener('mousemove', e => {
-  if (!svgV) return;
-  svgVMoved = true;
-  const coords = svgXY(e);
-  if (svgV.type === 'handle' && activeId) {
-    const u = units.find(u => u.id === activeId);
-    if (u && u.frames[curFrame]) u.frames[curFrame][svgV.idx] = { ...coords };
-  }
-  if (svgV.type === 'draw') dPts[svgV.idx] = { ...coords };
-  renderSvg();
-});
-window.addEventListener('mouseup', () => {
-  setTimeout(() => { svgV = null; }, 10);
-});
+      // ═══════════════════════════════════
+      // DRAW
+      // ═══════════════════════════════════
+      function updateDrawPointCount() {
+        const el = document.getElementById("drawPtCount");
+        el.textContent =
+          dPts.length === 0 ? "Clica no ponto central da zona" : "";
+      }
 
-// ═══════════════════════════════════
-// CARD CONFIG (Tab 2)
-// ═══════════════════════════════════
-function renderCardList(){
-  const el=document.getElementById('cList');
-  el.innerHTML='';
-  units.forEach(u=>{
-    const item=document.createElement('div');
-    item.className='ui'+(editCardId===u.id?' on':'');
-    item.innerHTML=`<div class="ui-dot ${u.status}"></div><div class="ui-name">${u.name}</div><div class="ui-mapped" style="color:var(--accent)">Editar →</div>`;
-    item.addEventListener('click',()=>openCardForm(u.id));
-    el.appendChild(item);
-  });
-}
+      function startDraw() {
+        if (!activeId) return;
+        const u = units.find((u) => u.id === activeId);
+        dPts =
+          u && u.frames[curFrame]
+            ? [{ x: u.frames[curFrame].x, y: u.frames[curFrame].y }]
+            : [];
+        drawing = true;
+        document.getElementById("canvasCol").classList.add("draw-mode");
+        document.getElementById("modePill").className = "mode-pill draw";
+        document.getElementById("modePill").textContent = "Desenhar";
+        document.getElementById("drawSection").style.display = "block";
+        document.getElementById("copyZoneRow").style.display = "none";
+        document.getElementById("copyAllRow").style.display = "none";
+        document.getElementById("tlHint").textContent =
+          "Clica na imagem para colocar a zona · Backspace = recomeçar · Enter = confirmar";
+        updateDrawPointCount();
+        renderSvg();
+      }
 
-function openCardForm(id){
-  editCardId=id;
-  const u=units.find(u=>u.id===id);
-  document.getElementById('cForm').style.display='flex';
-  document.getElementById('cForm').style.flexDirection='column';
-  document.getElementById('cFormTitle').textContent='Dados — '+u.name;
-  document.getElementById('cN').value=u.name||'';
-  document.getElementById('cTy').value=u.type||'';
-  document.getElementById('cA').value=u.area||'';
-  document.getElementById('cP').value=u.price||'';
-  document.getElementById('cSt').value=u.status||'available';
-  const ctaOn = u.ctaEnabled === true;
-  const toggle = document.getElementById('ctaToggle');
-  toggle.checked = ctaOn;
-  document.getElementById('ctaToggleVal').textContent = ctaOn ? 'On' : 'Off';
-  document.getElementById('ctaFields').classList.toggle('hidden', !ctaOn);
-  document.getElementById('cCt').value=u.cta||'';
-  document.getElementById('cCl').value=u.ctaLink||'';
-  const im=document.getElementById('cIm');
-  if(u.img){im.src=u.img;im.classList.add('on');document.getElementById('cImBtn').textContent='Alterar imagem';}
-  else{im.classList.remove('on');document.getElementById('cImBtn').textContent='+ Adicionar imagem';}
-  renderCardList();
-}
+      function cancelDraw() {
+        drawing = false;
+        dPts = [];
+        document.getElementById("canvasCol").classList.remove("draw-mode");
+        document.getElementById("modePill").className = "mode-pill navigate";
+        document.getElementById("modePill").textContent = "Navegar";
+        document.getElementById("drawSection").style.display = "none";
+        document.getElementById("tlHint").textContent =
+          "← → navegar · arrasta imagem · D = desenhar";
+        renderSvg();
+        updateCopyButtons();
+      }
 
-document.getElementById('cSave').addEventListener('click',()=>{
-  if(!editCardId)return;
-  const u=units.find(u=>u.id===editCardId);
-  u.name=document.getElementById('cN').value||u.name;
-  u.type=document.getElementById('cTy').value;
-  u.area=document.getElementById('cA').value;
-  u.price=document.getElementById('cP').value;
-  u.status=document.getElementById('cSt').value;
-  u.ctaEnabled=document.getElementById('ctaToggle').checked;
-  u.cta=document.getElementById('cCt').value;
-  u.ctaLink=document.getElementById('cCl').value;
-  renderUnitList();renderCardList();renderSvg();
-  const b=document.getElementById('cSave');
-  b.textContent='✓ Guardado';b.style.background='var(--green)';b.style.borderColor='var(--green)';
-  setTimeout(()=>{b.textContent='Guardar';b.style.background='';b.style.borderColor='';},1400);
-});
+      function confirmDraw() {
+        if (!activeId || dPts.length < 1) return;
+        const u = units.find((u) => u.id === activeId);
+        u.frames[curFrame] = { x: dPts[0].x, y: dPts[0].y };
+        showToast("Zona guardada na frame " + (curFrame + 1));
+        cancelDraw();
+        renderFGrid();
+        updateFrameStatus();
+      }
 
-document.getElementById('ctaToggle').addEventListener('change', function() {
-  const on = this.checked;
-  document.getElementById('ctaToggleVal').textContent = on ? 'On' : 'Off';
-  document.getElementById('ctaFields').classList.toggle('hidden', !on);
-});
+      document
+        .getElementById("cancelDraw")
+        .addEventListener("click", cancelDraw);
 
-document.getElementById('cImBtn').addEventListener('click',()=>document.getElementById('iInput').click());
-document.getElementById('iInput').addEventListener('change',e=>{
-  const f=e.target.files[0];if(!f||!editCardId)return;
-  const r=new FileReader();
-  r.onload=ev=>{
-    const u=units.find(u=>u.id===editCardId);if(u)u.img=ev.target.result;
-    const im=document.getElementById('cIm');im.src=ev.target.result;im.classList.add('on');
-    document.getElementById('cImBtn').textContent='Alterar imagem';
-  };r.readAsDataURL(f);
-});
+      // ═══════════════════════════════════
+      // ZOOM / PAN (editor)
+      // ═══════════════════════════════════
+      let edZoom = 1,
+        edPanX = 0,
+        edPanY = 0;
+      let edPanning = false,
+        edPanSX = 0,
+        edPanSY = 0,
+        edPanOX = 0,
+        edPanOY = 0;
+      const ZOOM_MIN = 1,
+        ZOOM_MAX = 8,
+        ZOOM_STEP = 0.2;
+      const imgWrap = document.getElementById("imgWrap");
 
-// ═══════════════════════════════════
-// EXPORT SUMMARY
-// ═══════════════════════════════════
-function updateExportSummary(){
-  const total=units.length;
-  const fully=units.filter(u=>Object.keys(u.frames).length===TOTAL).length;
-  const partial=units.filter(u=>{const c=Object.keys(u.frames).length;return c>0&&c<TOTAL;}).length;
-  const withCta=units.filter(u=>u.ctaEnabled).length;
-  document.getElementById('exportSummary').innerHTML=
-    `<strong>${total}</strong> unidades · <strong style="color:var(--green)">${fully}</strong> totalmente mapeadas · <strong style="color:var(--orange)">${partial}</strong> parciais<br>
+      function applyEditorTransform() {
+        imgWrap.style.transform = `scale(${edZoom}) translate(${edPanX / edZoom}px,${edPanY / edZoom}px)`;
+      }
+
+      function clampEdPan() {
+        if (edZoom <= 1) {
+          edPanX = 0;
+          edPanY = 0;
+          return;
+        }
+        const col = document
+          .getElementById("canvasCol")
+          .getBoundingClientRect();
+        const iw = cImg.offsetWidth * edZoom,
+          ih = cImg.offsetHeight * edZoom;
+        const maxX = Math.max(0, (iw - col.width) / 2);
+        const maxY = Math.max(0, (ih - col.height) / 2);
+        edPanX = Math.max(-maxX, Math.min(maxX, edPanX));
+        edPanY = Math.max(-maxY, Math.min(maxY, edPanY));
+      }
+
+      function applyEditorZoom(delta, cx, cy) {
+        const prev = edZoom;
+        edZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, edZoom + delta));
+        if (edZoom === 1) {
+          edPanX = 0;
+          edPanY = 0;
+        } else if (cx !== undefined) {
+          const r = imgWrap.getBoundingClientRect();
+          const ox = cx - (r.left + r.width / 2);
+          const oy = cy - (r.top + r.height / 2);
+          edPanX = (edPanX - ox) * (edZoom / prev) + ox;
+          edPanY = (edPanY - oy) * (edZoom / prev) + oy;
+        }
+        clampEdPan();
+        applyEditorTransform();
+      }
+
+      document.getElementById("canvasCol").addEventListener(
+        "wheel",
+        (e) => {
+          e.preventDefault();
+          if (e.ctrlKey || e.metaKey || edZoom > 1) {
+            applyEditorZoom(
+              (e.deltaY > 0 ? -1 : 1) * ZOOM_STEP * (e.ctrlKey ? 1 : 0.4),
+              e.clientX,
+              e.clientY,
+            );
+          } else {
+            if (!imgDrag && !drawing)
+              gotoFrame(curFrame + (e.deltaY > 0 ? 1 : -1));
+          }
+        },
+        { passive: false },
+      );
+
+      document.getElementById("canvasCol").addEventListener("dblclick", (e) => {
+        if (drawing) return; // don't reset zoom during draw
+        if (
+          e.target === cImg ||
+          e.target === oSvg ||
+          e.target.closest("#imgWrap")
+        ) {
+          if (edZoom > 1) {
+            edZoom = 1;
+            edPanX = 0;
+            edPanY = 0;
+            applyEditorTransform();
+          }
+        }
+      });
+
+      document
+        .getElementById("canvasCol")
+        .addEventListener("mousedown", (e) => {
+          if (e.button === 1 || (e.button === 0 && e.altKey)) {
+            edPanning = true;
+            edPanSX = e.clientX;
+            edPanSY = e.clientY;
+            edPanOX = edPanX;
+            edPanOY = edPanY;
+            e.preventDefault();
+          }
+        });
+      window.addEventListener("mousemove", (e) => {
+        if (!edPanning) return;
+        edPanX = edPanOX + (e.clientX - edPanSX);
+        edPanY = edPanOY + (e.clientY - edPanSY);
+        clampEdPan();
+        applyEditorTransform();
+      });
+      window.addEventListener("mouseup", (e) => {
+        if (e.button === 1 || edPanning) edPanning = false;
+      });
+
+      let edPinchD0 = 0;
+      document.getElementById("canvasCol").addEventListener(
+        "touchstart",
+        (e) => {
+          if (e.touches.length === 2) {
+            imgDrag = false;
+            edPinchD0 = Math.hypot(
+              e.touches[0].clientX - e.touches[1].clientX,
+              e.touches[0].clientY - e.touches[1].clientY,
+            );
+          }
+        },
+        { passive: true },
+      );
+      document.getElementById("canvasCol").addEventListener(
+        "touchmove",
+        (e) => {
+          if (e.touches.length === 2) {
+            const d = Math.hypot(
+              e.touches[0].clientX - e.touches[1].clientX,
+              e.touches[0].clientY - e.touches[1].clientY,
+            );
+            const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            applyEditorZoom((d - edPinchD0) * 0.01, cx, cy);
+            edPinchD0 = d;
+            e.preventDefault();
+          }
+        },
+        { passive: false },
+      );
+
+      window.addEventListener("keydown", (e) => {
+        if (
+          ["INPUT", "SELECT", "TEXTAREA"].includes(
+            document.activeElement.tagName,
+          )
+        )
+          return;
+        if ((e.key === "+" || e.key === "=") && e.ctrlKey) {
+          e.preventDefault();
+          applyEditorZoom(ZOOM_STEP);
+        }
+        if (e.key === "-" && e.ctrlKey) {
+          e.preventDefault();
+          applyEditorZoom(-ZOOM_STEP);
+        }
+        if (e.key === "0" && e.ctrlKey) {
+          e.preventDefault();
+          edZoom = 1;
+          edPanX = 0;
+          edPanY = 0;
+          applyEditorTransform();
+        }
+      });
+
+      // ═══════════════════════════════════
+      // SVG
+      // ═══════════════════════════════════
+      function svgXY(e) {
+        const r = cImg.getBoundingClientRect();
+        return {
+          x: parseFloat((((e.clientX - r.left) / r.width) * 100).toFixed(2)),
+          y: parseFloat((((e.clientY - r.top) / r.height) * 100).toFixed(2)),
+        };
+      }
+
+      const roImg = new ResizeObserver(() => renderSvg());
+      roImg.observe(cImg);
+
+      function renderSvg() {
+        oSvg.innerHTML = "";
+        units.forEach((u, i) => {
+          if (u.id === activeId) return;
+          const pt = u.frames[curFrame];
+          if (!pt) return;
+          const c = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "circle",
+          );
+          c.setAttribute("cx", pt.x);
+          c.setAttribute("cy", pt.y);
+          c.setAttribute("r", "1");
+          c.setAttribute("class", "z-fill");
+          c.addEventListener("click", () => {
+            if (!drawing) selectUnit(u.id);
+          });
+          oSvg.appendChild(c);
+          addLabel([pt], u.name || i + 1);
+        });
+        if (activeId) {
+          const u = units.find((u) => u.id === activeId);
+          const pt = u.frames[curFrame];
+          if (pt) {
+            const c = document.createElementNS(
+              "http://www.w3.org/2000/svg",
+              "circle",
+            );
+            c.setAttribute("cx", pt.x);
+            c.setAttribute("cy", pt.y);
+            c.setAttribute("r", "1");
+            c.setAttribute("class", "z-fill active");
+            oSvg.appendChild(c);
+            addLabel([pt], u.name);
+          }
+        }
+      }
+
+      function addLabel(pts, label) {
+        const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+        const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+        const t = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "text",
+        );
+        t.setAttribute("x", cx);
+        t.setAttribute("y", cy);
+        t.setAttribute("text-anchor", "middle");
+        t.setAttribute("dominant-baseline", "middle");
+        t.setAttribute("class", "z-lbl");
+        t.textContent = label;
+        oSvg.appendChild(t);
+      }
+
+      // SVG click → guarda ponto exato clicado
+      oSvg.addEventListener("click", (e) => {
+        if (!drawing) return;
+        if (svgV) return;
+        const c = svgXY(e);
+        dPts = [c];
+        confirmDraw();
+      });
+
+      // Vertex drag
+      let svgV = null;
+      let svgVMoved = false;
+      oSvg.addEventListener("mousedown", (e) => {
+        const t = e.target;
+        if (t.classList.contains("v-handle") && !drawing && activeId) {
+          svgV = { type: "handle", idx: parseInt(t.dataset.ptIdx) };
+          svgVMoved = false;
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        if (t.classList.contains("dp-point") && drawing) {
+          svgV = { type: "draw", idx: parseInt(t.dataset.dpIdx) };
+          svgVMoved = false;
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      });
+      window.addEventListener("mousemove", (e) => {
+        if (!svgV) return;
+        svgVMoved = true;
+        const coords = svgXY(e);
+        if (svgV.type === "handle" && activeId) {
+          const u = units.find((u) => u.id === activeId);
+          if (u && u.frames[curFrame])
+            u.frames[curFrame][svgV.idx] = { ...coords };
+        }
+        if (svgV.type === "draw") dPts[svgV.idx] = { ...coords };
+        renderSvg();
+      });
+      window.addEventListener("mouseup", () => {
+        setTimeout(() => {
+          svgV = null;
+        }, 10);
+      });
+
+      // ═══════════════════════════════════
+      // CARD CONFIG (Tab 2)
+      // ═══════════════════════════════════
+      function renderCardList() {
+        const el = document.getElementById("cList");
+        el.innerHTML = "";
+        units.forEach((u) => {
+          const item = document.createElement("div");
+          item.className = "ui" + (editCardId === u.id ? " on" : "");
+          item.innerHTML = `<div class="ui-dot ${u.status}"></div><div class="ui-name">${u.name}</div><div class="ui-mapped" style="color:var(--accent)">Editar →</div>`;
+          item.addEventListener("click", () => openCardForm(u.id));
+          el.appendChild(item);
+        });
+      }
+
+      function openCardForm(id) {
+        editCardId = id;
+        const u = units.find((u) => u.id === id);
+        document.getElementById("cForm").style.display = "flex";
+        document.getElementById("cForm").style.flexDirection = "column";
+        document.getElementById("cFormTitle").textContent = "Dados — " + u.name;
+        document.getElementById("cN").value = u.name || "";
+        document.getElementById("cTy").value = u.type || "";
+        document.getElementById("cA").value = u.area || "";
+        document.getElementById("cP").value = u.price || "";
+        document.getElementById("cSt").value = u.status || "available";
+        const ctaOn = u.ctaEnabled === true;
+        const toggle = document.getElementById("ctaToggle");
+        toggle.checked = ctaOn;
+        document.getElementById("ctaToggleVal").textContent = ctaOn
+          ? "On"
+          : "Off";
+        document.getElementById("ctaFields").classList.toggle("hidden", !ctaOn);
+        document.getElementById("cCt").value = u.cta || "";
+        document.getElementById("cCl").value = u.ctaLink || "";
+        const im = document.getElementById("cIm");
+        if (u.img) {
+          im.src = u.img;
+          im.classList.add("on");
+          document.getElementById("cImBtn").textContent = "Alterar imagem";
+        } else {
+          im.classList.remove("on");
+          document.getElementById("cImBtn").textContent = "+ Adicionar imagem";
+        }
+        renderCardList();
+      }
+
+      document.getElementById("cSave").addEventListener("click", () => {
+        if (!editCardId) return;
+        const u = units.find((u) => u.id === editCardId);
+        u.name = document.getElementById("cN").value || u.name;
+        u.type = document.getElementById("cTy").value;
+        u.area = document.getElementById("cA").value;
+        u.price = document.getElementById("cP").value;
+        u.status = document.getElementById("cSt").value;
+        u.ctaEnabled = document.getElementById("ctaToggle").checked;
+        u.cta = document.getElementById("cCt").value;
+        u.ctaLink = document.getElementById("cCl").value;
+        renderUnitList();
+        renderCardList();
+        renderSvg();
+        const b = document.getElementById("cSave");
+        b.textContent = "✓ Guardado";
+        b.style.background = "var(--green)";
+        b.style.borderColor = "var(--green)";
+        setTimeout(() => {
+          b.textContent = "Guardar";
+          b.style.background = "";
+          b.style.borderColor = "";
+        }, 1400);
+      });
+
+      document
+        .getElementById("ctaToggle")
+        .addEventListener("change", function () {
+          const on = this.checked;
+          document.getElementById("ctaToggleVal").textContent = on
+            ? "On"
+            : "Off";
+          document.getElementById("ctaFields").classList.toggle("hidden", !on);
+        });
+
+      document
+        .getElementById("cImBtn")
+        .addEventListener("click", () =>
+          document.getElementById("iInput").click(),
+        );
+      document.getElementById("iInput").addEventListener("change", (e) => {
+        const f = e.target.files[0];
+        if (!f || !editCardId) return;
+        const r = new FileReader();
+        r.onload = (ev) => {
+          const u = units.find((u) => u.id === editCardId);
+          if (u) u.img = ev.target.result;
+          const im = document.getElementById("cIm");
+          im.src = ev.target.result;
+          im.classList.add("on");
+          document.getElementById("cImBtn").textContent = "Alterar imagem";
+        };
+        r.readAsDataURL(f);
+      });
+
+      // ═══════════════════════════════════
+      // EXPORT SUMMARY
+      // ═══════════════════════════════════
+      function updateExportSummary() {
+        const total = units.length;
+        const fully = units.filter(
+          (u) => Object.keys(u.frames).length === TOTAL,
+        ).length;
+        const partial = units.filter((u) => {
+          const c = Object.keys(u.frames).length;
+          return c > 0 && c < TOTAL;
+        }).length;
+        const withCta = units.filter((u) => u.ctaEnabled).length;
+        document.getElementById("exportSummary").innerHTML =
+          `<strong>${total}</strong> unidades · <strong style="color:var(--green)">${fully}</strong> totalmente mapeadas · <strong style="color:var(--orange)">${partial}</strong> parciais<br>
     <strong>${withCta}</strong> com botão CTA ativo<br>
     Zoom inicial: <strong>1.5×</strong> — a turntable aparece maior`;
-}
+      }
 
-// ═══════════════════════════════════
-// SAVE / LOAD PROJECT
-// ═══════════════════════════════════
-document.getElementById('saveProjectBtn').addEventListener('click', () => {
-  const project = { version: 2, savedAt: new Date().toISOString(), units: units };
-  const blob = new Blob([JSON.stringify(project, null, 2)], {type: 'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = '360-project.json'; a.click();
-  URL.revokeObjectURL(url);
-  showToast('Projeto guardado');
-});
+      // ═══════════════════════════════════
+      // SAVE / LOAD PROJECT
+      // ═══════════════════════════════════
+      document
+        .getElementById("saveProjectBtn")
+        .addEventListener("click", () => {
+          const project = {
+            version: 2,
+            savedAt: new Date().toISOString(),
+            units: units,
+          };
+          const blob = new Blob([JSON.stringify(project, null, 2)], {
+            type: "application/json",
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "360-project.json";
+          a.click();
+          URL.revokeObjectURL(url);
+          showToast("Projeto guardado");
+        });
 
-document.getElementById('loadProjectBtn').addEventListener('click', () => {
-  document.getElementById('projectInput').click();
-});
+      document
+        .getElementById("loadProjectBtn")
+        .addEventListener("click", () => {
+          document.getElementById("projectInput").click();
+        });
 
-document.getElementById('projectInput').addEventListener('change', e => {
-  const file = e.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    try {
-      const project = JSON.parse(ev.target.result);
-      if (!project.units || !Array.isArray(project.units)) throw new Error('Ficheiro inválido');
-      units = project.units;
-      uid = Math.max(...units.map(u => u.id), 0) + 1;
-      activeId = null; editCardId = null;
-      renderUnitList(); renderSvg();
-      document.getElementById('fgSection').style.display = 'none';
-      showToast(units.length + ' unidades carregadas');
-    } catch(err) { alert('Erro ao carregar projeto: ' + err.message); }
-    e.target.value = '';
-  };
-  reader.readAsText(file);
-});
+      document
+        .getElementById("projectInput")
+        .addEventListener("change", (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            try {
+              const project = JSON.parse(ev.target.result);
+              if (!project.units || !Array.isArray(project.units))
+                throw new Error("Ficheiro inválido");
+              units = project.units;
+              // Migrate old 3-point array format → single {x, y} centroid
+              units.forEach((u) => {
+                Object.keys(u.frames).forEach((k) => {
+                  const f = u.frames[k];
+                  if (Array.isArray(f) && f.length > 0) {
+                    u.frames[k] = {
+                      x: parseFloat(
+                        (f.reduce((s, p) => s + p.x, 0) / f.length).toFixed(2),
+                      ),
+                      y: parseFloat(
+                        (f.reduce((s, p) => s + p.y, 0) / f.length).toFixed(2),
+                      ),
+                    };
+                  }
+                });
+              });
+              uid = Math.max(...units.map((u) => u.id), 0) + 1;
+              activeId = null;
+              editCardId = null;
+              renderUnitList();
+              renderSvg();
+              document.getElementById("fgSection").style.display = "none";
+              showToast(units.length + " unidades carregadas");
+            } catch (err) {
+              alert("Erro ao carregar projeto: " + err.message);
+            }
+            e.target.value = "";
+          };
+          reader.readAsText(file);
+        });
 
-// ═══════════════════════════════════
-// GENERATE
-// ═══════════════════════════════════
-function doGen(){
-  if(editCardId){
-    const u=units.find(u=>u.id===editCardId);
-    if(u){u.name=document.getElementById('cN').value||u.name;u.type=document.getElementById('cTy').value;u.area=document.getElementById('cA').value;u.price=document.getElementById('cP').value;u.status=document.getElementById('cSt').value;u.ctaEnabled=document.getElementById('ctaToggle').checked;u.cta=document.getElementById('cCt').value;u.ctaLink=document.getElementById('cCl').value;}
-  }
-  ['genBtn','genBtn2'].forEach(id=>{const b=document.getElementById(id);if(b)b.style.display='none';});
-  document.getElementById('genSpin').style.display='flex';
-  setTimeout(()=>{
-    try{
-      const html=buildEmbed(frames,units);
-      const blob=new Blob([html],{type:'text/html'});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');a.href=url;a.download='index.html';a.click();URL.revokeObjectURL(url);
-    }catch(err){alert('Erro: '+err.message);}
-    document.getElementById('genSpin').style.display='none';
-    ['genBtn','genBtn2'].forEach(id=>{const b=document.getElementById(id);if(b)b.style.display='';});
-  },100);
-}
-document.getElementById('genBtn').addEventListener('click',doGen);
-document.getElementById('genBtn2').addEventListener('click',doGen);
+      // ═══════════════════════════════════
+      // GENERATE
+      // ═══════════════════════════════════
+      function doGen() {
+        if (editCardId) {
+          const u = units.find((u) => u.id === editCardId);
+          if (u) {
+            u.name = document.getElementById("cN").value || u.name;
+            u.type = document.getElementById("cTy").value;
+            u.area = document.getElementById("cA").value;
+            u.price = document.getElementById("cP").value;
+            u.status = document.getElementById("cSt").value;
+            u.ctaEnabled = document.getElementById("ctaToggle").checked;
+            u.cta = document.getElementById("cCt").value;
+            u.ctaLink = document.getElementById("cCl").value;
+          }
+        }
+        ["genBtn", "genBtn2"].forEach((id) => {
+          const b = document.getElementById(id);
+          if (b) b.style.display = "none";
+        });
+        document.getElementById("genSpin").style.display = "flex";
+        setTimeout(() => {
+          try {
+            const html = buildEmbed(frames, units);
+            const blob = new Blob([html], { type: "text/html" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "index.html";
+            a.click();
+            URL.revokeObjectURL(url);
+          } catch (err) {
+            alert("Erro: " + err.message);
+          }
+          document.getElementById("genSpin").style.display = "none";
+          ["genBtn", "genBtn2"].forEach((id) => {
+            const b = document.getElementById(id);
+            if (b) b.style.display = "";
+          });
+        }, 100);
+      }
+      document.getElementById("genBtn").addEventListener("click", doGen);
+      document.getElementById("genBtn2").addEventListener("click", doGen);
 
-// ═══════════════════════════════════
-// BUILD EMBED
-// ═══════════════════════════════════
-function buildEmbed(imgs,units){
-  // Clean units for export — only include CTA if enabled
-  const exportUnits = units.map(u => {
-    const eu = {...u};
-    if (!eu.ctaEnabled) { eu.cta = ''; eu.ctaLink = ''; }
-    return eu;
-  });
+      // ═══════════════════════════════════
+      // BUILD EMBED
+      // ═══════════════════════════════════
+      function buildEmbed(imgs, units) {
+        // Clean units for export — only include CTA if enabled
+        const exportUnits = units.map((u) => {
+          const eu = { ...u };
+          if (!eu.ctaEnabled) {
+            eu.cta = "";
+            eu.ctaLink = "";
+          }
+          return eu;
+        });
 
-  return `<!DOCTYPE html>
+        return `<!DOCTYPE html>
 <html lang="pt">
 <head>
 <meta charset="UTF-8">
@@ -1084,18 +2150,20 @@ function buildEmbed(imgs,units){
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#f7f5f2;--white:#fff;--text:#1a1a1a;--muted:#9a9690;--accent:#c8a96e;--dark:#a8894e;--border:#e2ddd8;--green:#4a9a6a;--red:#c05050;--orange:#c8963e;--bar:clamp(52px,8vh,68px)}
+:root{--bg:#f7f5f2;--white:#fff;--text:#1a1a1a;--muted:#9a9690;--accent:#c8a96e;--dark:#a8894e;--border:#e2ddd8;--green:#4a9a6a;--red:#c05050;--orange:#c8963e;--blue:#5a8ab4;--bar:clamp(52px,8vh,68px)}
 html,body{width:100%;height:100%;background:var(--bg);font-family:'Jost',sans-serif;overflow:hidden;color:var(--text);position:fixed;inset:0}
 #app{width:100%;height:100%;display:flex;flex-direction:column}
 .imgarea{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;background:var(--bg);min-height:0}
-.img-wrap{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%}
-#display{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;user-select:none;-webkit-user-drag:none;cursor:grab;transform-origin:center center;transition:transform .35s cubic-bezier(0.25,0.46,0.45,0.94)}
+.img-wrap{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%;touch-action:none;overflow:hidden}
+#display{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;user-select:none;-webkit-user-drag:none;cursor:grab;touch-action:none;transform-origin:center center}
 #display:active{cursor:grabbing}
 #hotzones{position:absolute;top:0;left:0;pointer-events:none;overflow:visible}
-.hz-poly{fill:transparent;stroke:none;cursor:pointer;pointer-events:all}
-.hz-poly:hover{fill:transparent}
-.hz-poly.sold:hover{fill:rgba(192,80,80,.18)}
-.hz-poly.reserved:hover{fill:rgba(200,150,62,.18)}
+.hz-dot{fill:transparent;stroke:none;cursor:pointer;pointer-events:all}
+.hz-dot:hover{fill:rgba(200,169,110,.25)}
+.hz-dot.sold:hover{fill:rgba(192,80,80,.18)}
+.hz-dot.soon:hover{fill:rgba(90,138,180,.18)}
+.hz-dot.starting:hover{fill:rgba(200,150,62,.18)}
+.hz-dot.not-started:hover{fill:rgba(154,150,144,.18)}
 .hz-card{position:absolute;z-index:50;width:clamp(220px,28vw,280px);background:var(--white);border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,.10);display:none;flex-direction:column;pointer-events:all;animation:cardIn .15s ease}
 .hz-card.visible{display:flex}
 @keyframes cardIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
@@ -1107,7 +2175,9 @@ html,body{width:100%;height:100%;background:var(--bg);font-family:'Jost',sans-se
 .card-status-dot{width:6px;height:6px;border-radius:50%}
 .status-available .card-status-dot{background:var(--green)}.status-available{color:var(--green)}
 .status-sold .card-status-dot{background:var(--red)}.status-sold{color:var(--red)}
-.status-reserved .card-status-dot{background:var(--orange)}.status-reserved{color:var(--orange)}
+.status-soon .card-status-dot{background:var(--blue)}.status-soon{color:var(--blue)}
+.status-starting .card-status-dot{background:var(--orange)}.status-starting{color:var(--orange)}
+.status-not-started .card-status-dot{background:var(--muted)}.status-not-started{color:var(--muted)}
 .card-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .card-field{display:flex;flex-direction:column;gap:2px}
 .card-field-label{font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
@@ -1170,10 +2240,10 @@ const IMGS=${JSON.stringify(imgs)};
 const UNITS=${JSON.stringify(exportUnits)};
 const TOTAL=IMGS.length;
 let current=0,playing=false,playTimer=null,dir=1,speed=1;
-let dragging=false,dragX=0,dragFrame=0,hintShown=false;
-let idleTimer=null;const IDLE_MS=2*60*1000;
-let zoomLevel=1,panX=0,panY=0,isPanning=false;
-let panStartX=0,panStartY=0,panOriginX=0,panOriginY=0;
+let dragging=false,dragX=0,dragY=0,dragFrame=0,dragPanOY=0,hintShown=false;
+let idleTimer=null;const IDLE_MS=2*60*1000;let zoomLevel=1,panX=0,panY=0;
+let wheelAccX=0;
+let pinchD0=0,pinchCX0=0,pinchCY0=0;
 const ZOOM_MIN=1,ZOOM_MAX=4,ZOOM_STEP=0.25;
 const DEFAULT_ZOOM=1.5;
 const display=document.getElementById('display');
@@ -1195,31 +2265,48 @@ function sizeOverlay(){
 display.addEventListener('load',()=>{sizeOverlay();buildZones();});
 window.addEventListener('resize',()=>{sizeOverlay();buildZones();});
 
+let _activeUnit=null;
+function closeCard(){_activeUnit=null;hoverCard.classList.remove('visible');}
+
 function buildZones(){
   hotzones.innerHTML='';
   UNITS.forEach(u=>{
-    const pts=u.frames[current];
-    if(!pts||pts.length<3)return;
-    const poly=document.createElementNS('http://www.w3.org/2000/svg','polygon');
-    poly.setAttribute('points',pts.map(p=>p.x+','+p.y).join(' '));
-    poly.setAttribute('class','hz-poly'+(u.status==='sold'?' sold':u.status==='reserved'?' reserved':''));
-    poly.addEventListener('click',e=>{e.stopPropagation();openCard(u,e);});
-    hotzones.appendChild(poly);
+    const pt=u.frames[current];
+    if(!pt)return;
+    const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+    // dot visual r=1
+    const dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    const statusClass=u.status&&u.status!=='available'?' '+u.status:'';
+    dot.setAttribute('cx',pt.x);dot.setAttribute('cy',pt.y);dot.setAttribute('r','1');
+    dot.setAttribute('class','hz-dot'+statusClass);
+    // hitbox invisível r=2 para facilitar o click
+    const hit=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    hit.setAttribute('cx',pt.x);hit.setAttribute('cy',pt.y);hit.setAttribute('r','1');
+    hit.setAttribute('fill','transparent');hit.style.cursor='pointer';hit.style.pointerEvents='all';
+    g.appendChild(dot);g.appendChild(hit);
+    g.addEventListener('click',(e)=>{
+      e.stopPropagation();
+      // ignorar se foi drag (distância > 6px desde mousedown)
+      if(Math.abs(e.clientX-dragX)>6||Math.abs(e.clientY-dragY)>6)return;
+      openCard(u,e);
+    });
+    hotzones.appendChild(g);
   });
 }
 
-function closeCard(){hoverCard.classList.remove('visible');}
+imgarea.addEventListener('click',e=>{
+  if(!hoverCard.contains(e.target))closeCard();
+});
 
 function openCard(u,e){
-  const sl={available:'Disponível',sold:'Vendido',reserved:'Reservado'};
+  _activeUnit=u.id;
+  const sl={available:'Disponível',sold:'Vendido',soon:'Brevemente disponível',starting:'A iniciar construção','not-started':'Por iniciar'};
   const dis=u.status==='sold';
-  const showCta = u.ctaEnabled && (u.cta || u.ctaLink);
+  const showCta=u.ctaEnabled&&(u.cta||u.ctaLink);
   hoverCard.innerHTML=\`
     \${u.img?\`<img class="card-img show" src="\${u.img}" alt="">\`:''}
     <button class="card-close-btn" id="cardCloseBtn" aria-label="Fechar">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-      </svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
     <div class="card-body">
       <div class="card-name">\${u.name||'Unidade'}</div>
@@ -1233,19 +2320,19 @@ function openCard(u,e){
       </div>
       \${showCta?\`<a class="card-cta\${dis?' disabled':''}" href="\${dis?'#':(u.ctaLink||'#')}" target="\${dis?'_self':'_blank'}">\${dis?'Vendido':(u.cta||'Saber mais')}</a>\`:''}
     </div>\`;
-  const ar=imgarea.getBoundingClientRect(),cw=Math.min(280,ar.width*.85);
-  hoverCard.style.width=cw+'px';
-  let lx=e.clientX-ar.left+18,ly=e.clientY-ar.top-30;
-  if(lx+cw>ar.width-8)lx=e.clientX-ar.left-cw-18;
-  if(ly<0)ly=4;if(ly+300>ar.height)ly=ar.height-310;
-  hoverCard.style.left=Math.max(0,lx)+'px';hoverCard.style.top=Math.max(0,ly)+'px';
-  hoverCard.classList.add('visible');
   document.getElementById('cardCloseBtn').addEventListener('click',e=>{e.stopPropagation();closeCard();});
+  const ar=imgarea.getBoundingClientRect();
+  const cw=Math.min(280,ar.width*.85);
+  hoverCard.style.width=cw+'px';
+  const mx=e.clientX-ar.left, my=e.clientY-ar.top;
+  let lx=mx+16, ly=my-20;
+  if(lx+cw>ar.width-8)lx=mx-cw-16;
+  if(ly<0)ly=my+16;
+  if(ly+320>ar.height)ly=ar.height-325;
+  hoverCard.style.left=Math.max(0,lx)+'px';
+  hoverCard.style.top=Math.max(0,ly)+'px';
+  hoverCard.classList.add('visible');
 }
-
-imgarea.addEventListener('click',e=>{
-  if(!hoverCard.contains(e.target))closeCard();
-});
 
 function goTo(n){
   current=((n%TOTAL)+TOTAL)%TOTAL;
@@ -1254,29 +2341,77 @@ function goTo(n){
 }
 function hideHint(){if(!hintShown){hintShown=true;hint.classList.add('gone');}}
 function onUserInteract(){hideHint();if(playing)stopPlay();clearTimeout(idleTimer);idleTimer=setTimeout(startPlay,IDLE_MS);}
-display.addEventListener('mousedown',e=>{if(zoomLevel>1){isPanning=true;panStartX=e.clientX;panStartY=e.clientY;panOriginX=panX;panOriginY=panY;e.preventDefault();return;}dragging=true;dragX=e.clientX;dragFrame=current;onUserInteract();e.preventDefault();});
-window.addEventListener('mousemove',e=>{if(isPanning&&zoomLevel>1){panX=panOriginX+(e.clientX-panStartX);panY=panOriginY+(e.clientY-panStartY);clampPan();applyTransform();return;}if(!dragging)return;const sens=(display.offsetWidth||window.innerWidth)/TOTAL*.75;goTo(dragFrame-Math.round((e.clientX-dragX)/sens)*dir);});
-window.addEventListener('mouseup',()=>{dragging=false;isPanning=false;});
-display.addEventListener('touchstart',e=>{if(e.touches.length!==1||zoomLevel>1)return;dragging=true;dragX=e.touches[0].clientX;dragFrame=current;onUserInteract();},{passive:true});
-window.addEventListener('touchmove',e=>{if(!dragging||zoomLevel>1)return;const sens=(display.offsetWidth||window.innerWidth)/TOTAL*.75;goTo(dragFrame-Math.round((e.touches[0].clientX-dragX)/sens)*dir);},{passive:true});
-window.addEventListener('touchend',()=>{dragging=false;});
+let _wasDragged=false;
+imgWrap.addEventListener('mousedown',e=>{
+  if(e.button!==0)return;
+  dragging=true;_wasDragged=false;dragX=e.clientX;dragY=e.clientY;
+  dragFrame=current;dragPanOY=panY;
+  onUserInteract();e.preventDefault();
+});
+window.addEventListener('mousemove',e=>{
+  if(!dragging)return;
+  const dx=e.clientX-dragX,dy=e.clientY-dragY;
+  if(Math.abs(dx)>4||Math.abs(dy)>4)_wasDragged=true;
+  const sens=(display.offsetWidth||window.innerWidth)/TOTAL*1.8;
+  goTo(dragFrame-Math.round(dx/sens)*dir);
+  if(zoomLevel>1){panY=dragPanOY+dy;clampPan();applyTransform();}
+});
+window.addEventListener('mouseup',()=>{dragging=false;});
 function applyTransform(){display.style.transform=\`scale(\${zoomLevel}) translate(\${panX/zoomLevel}px,\${panY/zoomLevel}px)\`;sizeOverlay();}
 function clampPan(){if(zoomLevel<=1){panX=0;panY=0;return;}const r=imgarea.getBoundingClientRect();const iw=display.naturalWidth,ih=display.naturalHeight;const scale=Math.min(r.width/iw,r.height/ih)*zoomLevel;const visW=iw*scale,visH=ih*scale;const mx=Math.max(0,(visW-r.width)/2);const my=Math.max(0,(visH-r.height)/2);panX=Math.max(-mx,Math.min(mx,panX));panY=Math.max(-my,Math.min(my,panY));}
 function applyZoom(z,cx,cy){const prev=zoomLevel;zoomLevel=Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,z));if(zoomLevel<=1){zoomLevel=1;panX=0;panY=0;}else if(cx!==undefined){const r=display.getBoundingClientRect();const ox=cx-(r.left+r.width/2),oy=cy-(r.top+r.height/2);panX=(panX-ox)*(zoomLevel/prev)+ox;panY=(panY-oy)*(zoomLevel/prev)+oy;}clampPan();applyTransform();zoomLabel.textContent=zoomLevel%1===0?zoomLevel+'×':zoomLevel.toFixed(1)+'×';}
 document.getElementById('zoomInBtn').addEventListener('click',()=>{onUserInteract();applyZoom(zoomLevel+ZOOM_STEP);});
 document.getElementById('zoomOutBtn').addEventListener('click',()=>{onUserInteract();applyZoom(zoomLevel-ZOOM_STEP);});
-display.addEventListener('wheel',e=>{
+imgWrap.addEventListener('wheel',e=>{
   e.preventDefault();
-  if(e.ctrlKey||e.metaKey||zoomLevel>1){
+  // Pinch gesture no trackpad (ctrlKey) ou scroll vertical → zoom
+  if(e.ctrlKey||Math.abs(e.deltaY)>=Math.abs(e.deltaX)){
     const delta=-e.deltaY*(e.deltaMode===1?0.05:0.001);
-    const factor=Math.exp(delta*1.2);
-    applyZoom(zoomLevel*factor,e.clientX,e.clientY);
+    applyZoom(zoomLevel*Math.exp(delta*1.2),e.clientX,e.clientY);
     onUserInteract();
-  }else{goTo(current+(e.deltaY>0?1:-1)*dir);onUserInteract();}
+    return;
+  }
+  // Swipe horizontal no trackpad → rodar frames
+  wheelAccX+=e.deltaX;
+  const step=60;
+  if(Math.abs(wheelAccX)>=step){
+    goTo(current+Math.sign(wheelAccX)*dir);
+    wheelAccX=wheelAccX%step;
+    onUserInteract();
+  }
 },{passive:false});
-let pinchD0=0;
-display.addEventListener('touchstart',e=>{if(e.touches.length===2){dragging=false;pinchD0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);}},{passive:true});
-window.addEventListener('touchmove',e=>{if(e.touches.length===2){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);applyZoom(zoomLevel*(d/pinchD0),(e.touches[0].clientX+e.touches[1].clientX)/2,(e.touches[0].clientY+e.touches[1].clientY)/2);pinchD0=d;onUserInteract();}},{passive:true});
+imgWrap.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  if(e.touches.length===1){
+    dragging=true;
+    dragX=e.touches[0].clientX;dragY=e.touches[0].clientY;
+    dragFrame=current;dragPanOY=panY;
+    onUserInteract();
+  }else if(e.touches.length>=2){
+    dragging=false;
+    pinchD0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    pinchCX0=(e.touches[0].clientX+e.touches[1].clientX)/2;
+    pinchCY0=(e.touches[0].clientY+e.touches[1].clientY)/2;
+  }
+},{passive:false});
+window.addEventListener('touchmove',e=>{
+  if(e.touches.length===1&&dragging){
+    const dx=e.touches[0].clientX-dragX,dy=e.touches[0].clientY-dragY;
+    const sens=(display.offsetWidth||window.innerWidth)/TOTAL*1.8;
+    goTo(dragFrame-Math.round(dx/sens)*dir);
+    if(zoomLevel>1){panY=dragPanOY+dy;clampPan();applyTransform();}
+  }else if(e.touches.length>=2){
+    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    const cx=(e.touches[0].clientX+e.touches[1].clientX)/2;
+    const cy=(e.touches[0].clientY+e.touches[1].clientY)/2;
+    applyZoom(zoomLevel*(d/pinchD0),cx,cy);
+    panX+=(cx-pinchCX0);panY+=(cy-pinchCY0);
+    clampPan();applyTransform();
+    pinchD0=d;pinchCX0=cx;pinchCY0=cy;
+    onUserInteract();
+  }
+},{passive:false});
+window.addEventListener('touchend',e=>{if(e.touches.length===0)dragging=false;});
 function startPlay(){playing=true;playBtn.classList.add('on');playIcon.innerHTML='<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';playTimer=setInterval(()=>goTo(current+dir),1000/(speed*3));}
 function stopPlay(){playing=false;clearInterval(playTimer);playBtn.classList.remove('on');playIcon.innerHTML='<polygon points="5 3 19 12 5 21 5 3"/>';}
 playBtn.addEventListener('click',()=>{if(playing){stopPlay();clearTimeout(idleTimer);}else startPlay();});
@@ -1291,11 +2426,10 @@ display.addEventListener('load',function initZoom(){
   applyZoom(DEFAULT_ZOOM);
   display.removeEventListener('load',initZoom);
 },{once:true});
-startPlay();
 <\/script>
 </body>
 </html>`;
-}
-</script>
-</body>
+      }
+    </script>
+  </body>
 </html>
