@@ -1081,7 +1081,7 @@
               <select id="cSt">
                 <option value="available">Disponível</option>
                 <option value="sold">Vendido</option>
-                <option value="soon">Brevemente disponível</option>
+                <option value="soon">Verão 2026</option>
                 <option value="starting">A iniciar construção</option>
                 <option value="not-started">Por iniciar</option>
               </select>
@@ -2300,7 +2300,7 @@ imgarea.addEventListener('click',e=>{
 
 function openCard(u,e){
   _activeUnit=u.id;
-  const sl={available:'Disponível',sold:'Vendido',soon:'Brevemente disponível',starting:'A iniciar construção','not-started':'Por iniciar'};
+  const sl={available:'Disponível',sold:'Vendido',soon:'Verão 2026',starting:'A iniciar construção','not-started':'Por iniciar'};
   const dis=u.status==='sold';
   const showCta=u.ctaEnabled&&(u.cta||u.ctaLink);
   hoverCard.innerHTML=\`
